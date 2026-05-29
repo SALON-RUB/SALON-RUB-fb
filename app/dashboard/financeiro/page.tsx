@@ -404,7 +404,7 @@ export default function FinanceiroPage() {
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhum</SelectItem>
+                    <SelectItem value="none">Nenhum</SelectItem>
                     {employees.map(e => (
                       <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>
                     ))}

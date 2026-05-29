@@ -451,7 +451,7 @@ export default function AgendaPage() {
                   <SelectValue placeholder="Qualquer disponivel" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Qualquer disponivel</SelectItem>
+                  <SelectItem value="any">Qualquer disponivel</SelectItem>
                   {employees.filter(e => e.active).map(e => (
                     <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>
                   ))}
