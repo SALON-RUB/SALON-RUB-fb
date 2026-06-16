@@ -41,11 +41,13 @@ export default function SignUpPage() {
 
     try {
       setLoading(true)
+      console.log('[v0] Iniciando signup com:', { email, name })
       const response = await authClient.signUp.email({
         email,
         password,
         name,
       })
+      console.log('[v0] Resposta signup:', response)
 
       if (response.data?.user) {
         toast.success('Conta criada com sucesso!')
@@ -54,14 +56,15 @@ export default function SignUpPage() {
         }, 1500)
       } else {
         toast.error('Erro ao criar conta')
+        console.log('[v0] Erro: Sem dados de usuário')
       }
     } catch (error: any) {
+      console.error('[v0] Erro ao criar conta:', error)
       if (error.message?.includes('already exists')) {
         toast.error('Este email já está registrado')
       } else {
-        toast.error('Erro ao criar conta')
+        toast.error('Erro ao criar conta: ' + error.message)
       }
-      console.error(error)
     } finally {
       setLoading(false)
     }
