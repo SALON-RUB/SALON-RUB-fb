@@ -29,15 +29,29 @@ export default function ClientePage() {
       return
     }
 
-    const users = JSON.parse(localStorage.getItem('salon_users') || '[]')
-    const usuario = users.find((u: any) => u.salonCode === salonCode.toUpperCase())
+    // Procurar nos donos criados (owner_accounts)
+    const allOwnerAccounts = localStorage.getItem('owner_accounts')
+    const ownerAccounts = allOwnerAccounts ? JSON.parse(allOwnerAccounts) : []
+    
+    const ownerAccount = ownerAccounts.find((acc: any) => acc.salonCode === salonCode.toUpperCase())
 
-    if (!usuario) {
+    if (!ownerAccount) {
       setError('Código do salão não encontrado')
       return
     }
 
-    setSalon(usuario)
+    // Formatar dados do salon para uso na interface
+    const salonData = {
+      id: ownerAccount.salonId,
+      salonCode: ownerAccount.salonCode,
+      salon: {
+        name: ownerAccount.nomeSalao,
+        services: ownerAccount.salon?.services || [],
+        appointments: ownerAccount.salon?.appointments || [],
+      }
+    }
+
+    setSalon(salonData)
     setStep('agendamento')
   }
 
@@ -65,18 +79,22 @@ export default function ClientePage() {
       dataAgendamento: new Date().toISOString(),
     }
 
-    const salonAtualizado = {
-      ...salon,
-      salon: {
-        ...salon.salon,
-        appointments: [...(salon.salon?.appointments || []), novoAgendamento],
-      },
+    // Atualizar no localStorage
+    const allOwnerAccounts = localStorage.getItem('owner_accounts')
+    const ownerAccounts = allOwnerAccounts ? JSON.parse(allOwnerAccounts) : []
+    
+    const indice = ownerAccounts.findIndex((acc: any) => acc.salonCode === salon.salonCode)
+    
+    if (indice !== -1) {
+      if (!ownerAccounts[indice].salon) {
+        ownerAccounts[indice].salon = {}
+      }
+      if (!ownerAccounts[indice].salon.appointments) {
+        ownerAccounts[indice].salon.appointments = []
+      }
+      ownerAccounts[indice].salon.appointments.push(novoAgendamento)
+      localStorage.setItem('owner_accounts', JSON.stringify(ownerAccounts))
     }
-
-    const users = JSON.parse(localStorage.getItem('salon_users') || '[]')
-    const indice = users.findIndex((u: any) => u.id === salon.id)
-    users[indice] = salonAtualizado
-    localStorage.setItem('salon_users', JSON.stringify(users))
 
     setAgendamentoConfirmado(novoAgendamento)
     setStep('confirmacao')
