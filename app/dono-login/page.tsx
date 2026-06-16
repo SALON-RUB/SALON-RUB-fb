@@ -6,10 +6,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Toast } from '@/components/toast'
-import { User, ArrowLeft } from 'lucide-react'
-import { getSalonByCode } from '@/app/actions/salon'
+import { Scissors, ArrowLeft } from 'lucide-react'
 
-export default function EmployeeLoginPage() {
+export default function OwnerLoginPage() {
   const router = useRouter()
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
@@ -19,11 +18,10 @@ export default function EmployeeLoginPage() {
     fullName: '',
     email: '',
     password: '',
-    salonCode: '',
   })
 
   const handleLogin = async () => {
-    if (!formData.fullName || !formData.email || !formData.password || !formData.salonCode) {
+    if (!formData.fullName || !formData.email || !formData.password) {
       setToastMessage('Preencha todos os campos')
       setToastType('error')
       setShowToast(true)
@@ -31,36 +29,24 @@ export default function EmployeeLoginPage() {
     }
 
     try {
-      // Verificar se o código do salão existe
-      const salon = await getSalonByCode(formData.salonCode)
-      if (!salon) {
-        setToastMessage('Código do salão inválido')
-        setToastType('error')
-        setShowToast(true)
-        return
-      }
-
-      const employeeId = `emp_${Date.now()}_${Math.random().toString(36).slice(2)}`
+      const ownerId = `owner_${Date.now()}_${Math.random().toString(36).slice(2)}`
       
       const session = {
-        userId: employeeId,
+        userId: ownerId,
         email: formData.email,
         fullName: formData.fullName,
-        salonId: salon.id,
-        salonCode: formData.salonCode,
-        role: 'employee',
+        role: 'owner',
         loginTime: new Date().toISOString(),
       }
       
       localStorage.setItem('user_session', JSON.stringify(session))
-      localStorage.setItem('salon_session', JSON.stringify(salon))
       
       setToastMessage('Login realizado com sucesso!')
       setToastType('success')
       setShowToast(true)
       
       setTimeout(() => {
-        router.push('/dashboard/employee')
+        router.push('/dashboard')
       }, 1000)
     } catch (error) {
       setToastMessage('Erro ao fazer login')
@@ -88,15 +74,15 @@ export default function EmployeeLoginPage() {
           Voltar
         </Button>
 
-        <Card className="border-blue-500/20">
+        <Card className="border-primary/20">
           <CardHeader>
             <div className="flex items-center gap-3 mb-4">
-              <div className="p-3 rounded-lg bg-blue-500/20">
-                <User className="w-6 h-6 text-blue-400" />
+              <div className="p-3 rounded-lg bg-primary/20">
+                <Scissors className="w-6 h-6 text-primary" />
               </div>
               <div>
-                <CardTitle>Funcionário</CardTitle>
-                <p className="text-sm text-muted-foreground">Acesso ao seu salão</p>
+                <CardTitle>Dono do Salão</CardTitle>
+                <p className="text-sm text-muted-foreground">Acesso completo</p>
               </div>
             </div>
           </CardHeader>
@@ -104,7 +90,7 @@ export default function EmployeeLoginPage() {
             <div>
               <label className="text-sm font-medium mb-2 block">Nome Completo</label>
               <Input
-                placeholder="Maria Santos"
+                placeholder="João Silva"
                 value={formData.fullName}
                 onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
               />
@@ -114,7 +100,7 @@ export default function EmployeeLoginPage() {
               <label className="text-sm font-medium mb-2 block">Email</label>
               <Input
                 type="email"
-                placeholder="maria@email.com"
+                placeholder="joao@email.com"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               />
@@ -130,19 +116,9 @@ export default function EmployeeLoginPage() {
               />
             </div>
 
-            <div>
-              <label className="text-sm font-medium mb-2 block">Código do Salão</label>
-              <Input
-                placeholder="Fornecido pelo dono"
-                value={formData.salonCode}
-                onChange={(e) => setFormData({ ...formData, salonCode: e.target.value.toUpperCase() })}
-                maxLength={7}
-              />
-            </div>
-
             <Button
               onClick={handleLogin}
-              className="w-full mt-6 bg-blue-500 hover:bg-blue-600"
+              className="w-full mt-6 bg-primary hover:bg-primary/90"
             >
               Entrar
             </Button>

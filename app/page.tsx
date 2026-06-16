@@ -43,7 +43,7 @@ export default function HomePage() {
           </div>
 
           <div className="grid gap-3 pt-4">
-            <Link href="/funcionario-login">
+            <Link href="/dono-login">
               <Card className="cursor-pointer hover:border-primary/50 transition-colors bg-card/40 backdrop-blur-sm border-primary/20">
                 <CardContent className="p-6">
                   <div className="flex items-center gap-4">
