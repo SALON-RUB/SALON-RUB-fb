@@ -18,13 +18,29 @@ export default function EmployeeLoginPage() {
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
-    password: '',
     salonCode: '',
   })
 
-  const handleLogin = async () => {
-    if (!formData.fullName || !formData.email || !formData.password || !formData.salonCode) {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target
+    setFormData(prev => ({
+      ...prev,
+      [name]: value,
+    }))
+  }
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!formData.fullName || !formData.email || !formData.salonCode) {
       setToastMessage('Preencha todos os campos')
+      setToastType('error')
+      setShowToast(true)
+      return
+    }
+
+    if (!formData.email.includes('@')) {
+      setToastMessage('Email inválido')
       setToastType('error')
       setShowToast(true)
       return
@@ -63,6 +79,7 @@ export default function EmployeeLoginPage() {
         router.push('/dashboard/employee')
       }, 1000)
     } catch (error) {
+      console.error('[v0] Erro ao fazer login:', error)
       setToastMessage('Erro ao fazer login')
       setToastType('error')
       setShowToast(true)
@@ -104,9 +121,11 @@ export default function EmployeeLoginPage() {
             <div>
               <label className="text-sm font-medium mb-2 block">Nome Completo</label>
               <Input
-                placeholder="Maria Santos"
+                type="text"
+                name="fullName"
+                placeholder="João Silva"
                 value={formData.fullName}
-                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                onChange={handleChange}
               />
             </div>
 
@@ -114,35 +133,27 @@ export default function EmployeeLoginPage() {
               <label className="text-sm font-medium mb-2 block">Email</label>
               <Input
                 type="email"
-                placeholder="maria@email.com"
+                name="email"
+                placeholder="joao@email.com"
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium mb-2 block">Senha</label>
-              <Input
-                type="password"
-                placeholder="••••••••"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                onChange={handleChange}
               />
             </div>
 
             <div>
               <label className="text-sm font-medium mb-2 block">Código do Salão</label>
               <Input
-                placeholder="Fornecido pelo dono"
+                type="text"
+                name="salonCode"
+                placeholder="ABC123"
                 value={formData.salonCode}
-                onChange={(e) => setFormData({ ...formData, salonCode: e.target.value.toUpperCase() })}
-                maxLength={7}
+                onChange={handleChange}
               />
             </div>
 
             <Button
               onClick={handleLogin}
-              className="w-full mt-6 bg-blue-500 hover:bg-blue-600"
+              className="w-full mt-6 bg-primary hover:bg-primary/90"
             >
               Entrar
             </Button>
