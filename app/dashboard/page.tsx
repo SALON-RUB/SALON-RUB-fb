@@ -108,8 +108,8 @@ export default function DashboardPage() {
               <Menu className="w-5 h-5" />
             </button>
             <h1 className="text-xl font-bold">
-              <span className="text-primary">Salao</span>{' '}
-              <span className="text-foreground">Pro</span>
+              <span className="text-primary">Salon</span>{' '}
+              <span className="text-foreground">Rub</span>
             </h1>
           </div>
         </div>
@@ -133,8 +133,8 @@ export default function DashboardPage() {
           <div className="flex flex-col h-full">
             <div className="flex items-center justify-between p-4 lg:hidden">
               <h1 className="text-xl font-bold">
-                <span className="text-primary">Salao</span>{' '}
-                <span className="text-foreground">Pro</span>
+                <span className="text-primary">Salon</span>{' '}
+                <span className="text-foreground">Rub</span>
               </h1>
               <button onClick={() => setSidebarOpen(false)}>
                 <X className="w-5 h-5" />
