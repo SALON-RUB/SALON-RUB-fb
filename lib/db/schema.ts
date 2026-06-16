@@ -6,41 +6,39 @@ import {
   integer,
   decimal,
   boolean,
-  json,
+  varchar,
+  date,
+  pgEnum,
 } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 
 // Better Auth Tables
 export const user = pgTable('user', {
-  id: uuid('id').primaryKey().defaultRandom(),
+  id: text('id').primaryKey(),
   name: text('name'),
-  email: text('email').unique(),
-  emailVerified: boolean('emailVerified').default(false),
+  email: text('email').notNull().unique(),
+  emailVerified: boolean('emailVerified').notNull(),
   image: text('image'),
-  role: text('role').default('user'),
-  banned: boolean('banned').default(false),
-  banReason: text('banReason'),
-  banExpires: timestamp('banExpires'),
-  createdAt: timestamp('createdAt').defaultNow(),
-  updatedAt: timestamp('updatedAt').defaultNow(),
+  createdAt: timestamp('createdAt').notNull(),
+  updatedAt: timestamp('updatedAt').notNull(),
 })
 
 export const session = pgTable('session', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  expiresAt: timestamp('expiresAt'),
-  token: text('token').unique(),
-  createdAt: timestamp('createdAt').defaultNow(),
-  updatedAt: timestamp('updatedAt').defaultNow(),
+  id: text('id').primaryKey(),
+  expiresAt: timestamp('expiresAt').notNull(),
+  token: text('token').notNull().unique(),
+  createdAt: timestamp('createdAt').notNull(),
+  updatedAt: timestamp('updatedAt').notNull(),
   ipAddress: text('ipAddress'),
   userAgent: text('userAgent'),
-  userId: uuid('userId').notNull(),
+  userId: text('userId').notNull().references(() => user.id),
 })
 
 export const account = pgTable('account', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  accountId: text('accountId'),
-  providerId: text('providerId'),
-  userId: uuid('userId').notNull(),
+  id: text('id').primaryKey(),
+  accountId: text('accountId').notNull(),
+  providerId: text('providerId').notNull(),
+  userId: text('userId').notNull().references(() => user.id),
   accessToken: text('accessToken'),
   refreshToken: text('refreshToken'),
   idToken: text('idToken'),
@@ -48,88 +46,99 @@ export const account = pgTable('account', {
   refreshTokenExpiresAt: timestamp('refreshTokenExpiresAt'),
   scope: text('scope'),
   password: text('password'),
-  createdAt: timestamp('createdAt').defaultNow(),
-  updatedAt: timestamp('updatedAt').defaultNow(),
+  createdAt: timestamp('createdAt').notNull(),
+  updatedAt: timestamp('updatedAt').notNull(),
 })
 
 export const verification = pgTable('verification', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  identifier: text('identifier'),
-  value: text('value'),
-  expiresAt: timestamp('expiresAt'),
+  id: text('id').primaryKey(),
+  identifier: text('identifier').notNull(),
+  value: text('value').notNull(),
+  expiresAt: timestamp('expiresAt').notNull(),
   createdAt: timestamp('createdAt'),
   updatedAt: timestamp('updatedAt'),
 })
 
 // App Tables
-export const salon = pgTable('salon', {
+export const roleEnum = pgEnum('role', ['owner', 'employee'])
+
+export const salons = pgTable('salons', {
   id: uuid('id').primaryKey().defaultRandom(),
-  userId: text('userId').notNull(),
-  name: text('name').notNull(),
-  phone: text('phone'),
-  address: text('address'),
-  code: text('code').notNull().unique(),
-  createdAt: timestamp('createdAt').defaultNow(),
-  updatedAt: timestamp('updatedAt').defaultNow(),
+  ownerId: text('owner_id').notNull().references(() => user.id),
+  name: varchar('name', { length: 255 }).notNull(),
+  phone: varchar('phone', { length: 20 }),
+  address: varchar('address', { length: 500 }),
+  salonCode: varchar('salon_code', { length: 10 }).notNull().unique(),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
 })
 
-export const employee = pgTable('employee', {
+export const services = pgTable('services', {
   id: uuid('id').primaryKey().defaultRandom(),
-  salonId: uuid('salonId').notNull(),
-  name: text('name').notNull(),
-  email: text('email').notNull(),
-  password: text('password').notNull(),
-  commission: decimal('commission', { precision: 5, scale: 2 }).default('0'),
-  active: boolean('active').default(true),
-  createdAt: timestamp('createdAt').defaultNow(),
-  updatedAt: timestamp('updatedAt').defaultNow(),
-})
-
-export const service = pgTable('service', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  salonId: uuid('salonId').notNull(),
-  name: text('name').notNull(),
-  category: text('category'),
+  salonId: uuid('salon_id').notNull().references(() => salons.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 255 }).notNull(),
+  category: varchar('category', { length: 100 }),
+  duration: integer('duration').notNull(),
   price: decimal('price', { precision: 10, scale: 2 }).notNull(),
-  duration: integer('duration').default(30),
-  active: boolean('active').default(true),
-  createdAt: timestamp('createdAt').defaultNow(),
-  updatedAt: timestamp('updatedAt').defaultNow(),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
 })
 
-export const appointment = pgTable('appointment', {
+export const appointments = pgTable('appointments', {
   id: uuid('id').primaryKey().defaultRandom(),
-  salonId: uuid('salonId').notNull(),
-  employeeId: uuid('employeeId'),
-  clientName: text('clientName').notNull(),
-  clientPhone: text('clientPhone').notNull(),
-  serviceId: uuid('serviceId').notNull(),
-  date: timestamp('date').notNull(),
-  startTime: text('startTime').notNull(),
-  endTime: text('endTime').notNull(),
-  status: text('status').default('scheduled'),
+  salonId: uuid('salon_id').notNull().references(() => salons.id, { onDelete: 'cascade' }),
+  serviceId: uuid('service_id').references(() => services.id, { onDelete: 'set null' }),
+  clientName: varchar('client_name', { length: 255 }).notNull(),
+  clientPhone: varchar('client_phone', { length: 20 }).notNull(),
+  appointmentDate: date('appointment_date').notNull(),
+  appointmentTime: varchar('appointment_time', { length: 5 }).notNull(),
+  duration: integer('duration'),
+  price: decimal('price', { precision: 10, scale: 2 }),
+  status: varchar('status', { length: 50 }).default('agendado'),
   notes: text('notes'),
-  revenue: decimal('revenue', { precision: 10, scale: 2 }).default('0'),
-  createdAt: timestamp('createdAt').defaultNow(),
-  updatedAt: timestamp('updatedAt').defaultNow(),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
 })
 
-export const operatingHours = pgTable('operating_hours', {
+export const employees = pgTable('employees', {
   id: uuid('id').primaryKey().defaultRandom(),
-  salonId: uuid('salonId').notNull(),
-  dayOfWeek: integer('dayOfWeek').notNull(),
-  isOpen: boolean('isOpen').default(true),
-  openTime: text('openTime').default('09:00'),
-  closeTime: text('closeTime').default('18:00'),
-  createdAt: timestamp('createdAt').defaultNow(),
-  updatedAt: timestamp('updatedAt').defaultNow(),
+  salonId: uuid('salon_id').notNull().references(() => salons.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => user.id),
+  name: varchar('name', { length: 255 }).notNull(),
+  email: varchar('email', { length: 255 }).notNull(),
+  phone: varchar('phone', { length: 20 }),
+  role: roleEnum('role').default('employee'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
 })
 
-export const expense = pgTable('expense', {
+export const earnings = pgTable('earnings', {
   id: uuid('id').primaryKey().defaultRandom(),
-  salonId: uuid('salonId').notNull(),
-  description: text('description').notNull(),
+  salonId: uuid('salon_id').notNull().references(() => salons.id, { onDelete: 'cascade' }),
+  employeeId: uuid('employee_id').references(() => employees.id, { onDelete: 'set null' }),
   amount: decimal('amount', { precision: 10, scale: 2 }).notNull(),
-  date: timestamp('date').defaultNow(),
-  createdAt: timestamp('createdAt').defaultNow(),
+  type: varchar('type', { length: 50 }).notNull(),
+  description: text('description'),
+  date: date('date').defaultNow(),
+  createdAt: timestamp('created_at').defaultNow(),
+})
+
+export const expenses = pgTable('expenses', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  salonId: uuid('salon_id').notNull().references(() => salons.id, { onDelete: 'cascade' }),
+  amount: decimal('amount', { precision: 10, scale: 2 }).notNull(),
+  description: text('description').notNull(),
+  date: date('date').defaultNow(),
+  createdAt: timestamp('created_at').defaultNow(),
+})
+
+export const businessHours = pgTable('business_hours', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  salonId: uuid('salon_id').notNull().references(() => salons.id, { onDelete: 'cascade' }),
+  dayOfWeek: integer('day_of_week').notNull(),
+  isOpen: boolean('is_open').default(true),
+  openingTime: varchar('opening_time', { length: 5 }),
+  closingTime: varchar('closing_time', { length: 5 }),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
 })

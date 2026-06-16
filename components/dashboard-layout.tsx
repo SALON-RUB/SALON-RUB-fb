@@ -38,10 +38,10 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
   const menuItems = [
     { label: 'Dashboard', href: '/dashboard', icon: Home },
-    { label: 'Agenda', href: '/dashboard/agenda', icon: Calendar },
+    { label: 'Agendamentos', href: '/dashboard/agendamentos', icon: Calendar },
     { label: 'Serviços', href: '/dashboard/servicos', icon: Scissors },
+    { label: 'Funcionários', href: '/dashboard/funcionarios', icon: Users },
     { label: 'Financeiro', href: '/dashboard/financeiro', icon: DollarSign },
-    { label: 'Equipe', href: '/dashboard/equipe', icon: Users },
     { label: 'Código do Salão', href: '/dashboard/codigo', icon: Key },
     { label: 'Configurações', href: '/dashboard/configuracoes', icon: Settings },
   ]
