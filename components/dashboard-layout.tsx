@@ -23,15 +23,20 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<any>(null)
 
   useEffect(() => {
-    const session = localStorage.getItem('salon_session')
+    const session = localStorage.getItem('user_session')
     if (!session) {
-      router.push('/sign-in')
+      router.push('/')
       return
     }
-    setUser(JSON.parse(session))
+    try {
+      setUser(JSON.parse(session))
+    } catch {
+      router.push('/')
+    }
   }, [router])
 
   const handleLogout = () => {
+    localStorage.removeItem('user_session')
     localStorage.removeItem('salon_session')
     router.push('/')
   }

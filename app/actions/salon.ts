@@ -1,217 +1,252 @@
 
 'use server'
 
-import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { salon, employee, service, appointment, operatingHours, expense } from '@/lib/db/schema'
-import { eq, and, gte, lte } from 'drizzle-orm'
-import { headers } from 'next/headers'
+import { salons, services, appointments, employees } from '@/lib/db/schema'
+import { eq, and } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
-import { v4 as uuidv4 } from 'uuid'
+import crypto from 'crypto'
 
-async function getUserId() {
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session?.user) throw new Error('Unauthorized')
-  return session.user.id
-}
+// Para simplificar, vamos usar um sistema de autenticação baseado em localStorage
+// mas com verificação no banco de dados
 
-// Generate unique 6-character code
-function generateSalonCode(): string {
-  return Math.random().toString(36).substring(2, 8).toUpperCase()
-}
-
-export async function createSalon(data: {
-  name: string
-  phone: string
-  address: string
-}) {
-  const userId = await getUserId()
-  
-  const newSalon = await db
-    .insert(salon)
-    .values({
-      userId,
-      name: data.name,
-      phone: data.phone,
-      address: data.address,
-      code: generateSalonCode(),
+export async function createSalonIfNotExists(userId: string, name: string = 'Meu Salão') {
+  try {
+    // Verificar se já existe
+    const existing = await db.query.salons.findFirst({
+      where: eq(salons.ownerId, userId),
     })
-    .returning()
 
-  revalidatePath('/')
-  return newSalon[0]
-}
+    if (existing) return existing
 
-export async function getSalonByUserId() {
-  const userId = await getUserId()
-  
-  const result = await db
-    .select()
-    .from(salon)
-    .where(eq(salon.userId, userId))
-    .limit(1)
+    // Gerar código único
+    const salonCode = crypto
+      .randomBytes(3)
+      .toString('hex')
+      .toUpperCase()
+      .slice(0, 7)
 
-  return result[0] || null
+    const newSalon = await db
+      .insert(salons)
+      .values({
+        ownerId: userId,
+        name,
+        salonCode,
+      })
+      .returning()
+
+    return newSalon[0]
+  } catch (error) {
+    console.error('[v0] Erro ao criar salão:', error)
+    return null
+  }
 }
 
 export async function getSalonByCode(code: string) {
-  const result = await db
-    .select()
-    .from(salon)
-    .where(eq(salon.code, code))
-    .limit(1)
-
-  return result[0] || null
-}
-
-export async function addEmployee(salonId: string, data: {
-  name: string
-  email: string
-  password: string
-}) {
-  const result = await db
-    .insert(employee)
-    .values({
-      salonId,
-      name: data.name,
-      email: data.email,
-      password: data.password,
+  try {
+    const salon = await db.query.salons.findFirst({
+      where: eq(salons.salonCode, code),
     })
-    .returning()
-
-  revalidatePath('/dashboard')
-  return result[0]
+    return salon
+  } catch (error) {
+    console.error('[v0] Erro ao buscar salão:', error)
+    return null
+  }
 }
 
-export async function getEmployeesBySalon(salonId: string) {
-  return db
-    .select()
-    .from(employee)
-    .where(eq(employee.salonId, salonId))
+export async function getSalonById(salonId: string) {
+  try {
+    const salon = await db.query.salons.findFirst({
+      where: eq(salons.id, salonId as any),
+    })
+    return salon
+  } catch (error) {
+    console.error('[v0] Erro ao buscar salão:', error)
+    return null
+  }
 }
 
-export async function addService(salonId: string, data: {
+export async function addService(salonId: string, serviceData: {
   name: string
   category: string
-  price: string
   duration: number
+  price: string
 }) {
-  const result = await db
-    .insert(service)
-    .values({
-      salonId,
-      name: data.name,
-      category: data.category,
-      price: data.price,
-      duration: data.duration,
-    })
-    .returning()
+  try {
+    const newService = await db
+      .insert(services)
+      .values({
+        salonId: salonId as any,
+        name: serviceData.name,
+        category: serviceData.category,
+        duration: serviceData.duration,
+        price: serviceData.price,
+      })
+      .returning()
 
-  revalidatePath('/dashboard')
-  return result[0]
+    revalidatePath('/dashboard/servicos')
+    return newService[0]
+  } catch (error) {
+    console.error('[v0] Erro ao criar serviço:', error)
+    throw error
+  }
 }
 
 export async function getServicesBySalon(salonId: string) {
-  return db
-    .select()
-    .from(service)
-    .where(and(eq(service.salonId, salonId), eq(service.active, true)))
-}
-
-export async function createAppointment(salonId: string, data: any) {
-  const result = await db
-    .insert(appointment)
-    .values({
-      salonId,
-      employeeId: data.employeeId || null,
-      clientName: data.clientName,
-      clientPhone: data.clientPhone,
-      serviceId: data.serviceId,
-      date: new Date(data.date),
-      startTime: data.startTime,
-      endTime: data.endTime,
-      revenue: data.revenue,
+  try {
+    return await db.query.services.findMany({
+      where: eq(services.salonId, salonId as any),
     })
-    .returning()
-
-  revalidatePath('/dashboard/agenda')
-  return result[0]
-}
-
-export async function getAppointmentsBySalon(salonId: string, startDate?: Date, endDate?: Date) {
-  let query = db
-    .select()
-    .from(appointment)
-    .where(eq(appointment.salonId, salonId))
-
-  if (startDate && endDate) {
-    query = db
-      .select()
-      .from(appointment)
-      .where(
-        and(
-          eq(appointment.salonId, salonId),
-          gte(appointment.date, startDate),
-          lte(appointment.date, endDate)
-        )
-      )
+  } catch (error) {
+    console.error('[v0] Erro ao buscar serviços:', error)
+    return []
   }
-
-  return query
 }
 
-export async function updateOperatingHours(salonId: string, hours: any) {
-  for (let i = 0; i < 7; i++) {
-    const existing = await db
-      .select()
-      .from(operatingHours)
-      .where(and(eq(operatingHours.salonId, salonId), eq(operatingHours.dayOfWeek, i)))
-      .limit(1)
-
-    if (existing.length > 0) {
-      await db
-        .update(operatingHours)
-        .set(hours[i])
-        .where(eq(operatingHours.id, existing[0].id))
-    } else {
-      await db.insert(operatingHours).values({
-        salonId,
-        dayOfWeek: i,
-        ...hours[i],
+export async function updateService(
+  serviceId: string,
+  salonId: string,
+  serviceData: {
+    name: string
+    category: string
+    duration: number
+    price: string
+  }
+) {
+  try {
+    const updated = await db
+      .update(services)
+      .set({
+        name: serviceData.name,
+        category: serviceData.category,
+        duration: serviceData.duration,
+        price: serviceData.price,
+        updatedAt: new Date(),
       })
-    }
+      .where(and(
+        eq(services.id, serviceId as any),
+        eq(services.salonId, salonId as any)
+      ))
+      .returning()
+
+    revalidatePath('/dashboard/servicos')
+    return updated[0]
+  } catch (error) {
+    console.error('[v0] Erro ao atualizar serviço:', error)
+    throw error
   }
-
-  revalidatePath('/dashboard/configuracoes')
 }
 
-export async function getOperatingHours(salonId: string) {
-  return db
-    .select()
-    .from(operatingHours)
-    .where(eq(operatingHours.salonId, salonId))
+export async function deleteService(serviceId: string, salonId: string) {
+  try {
+    await db
+      .delete(services)
+      .where(and(
+        eq(services.id, serviceId as any),
+        eq(services.salonId, salonId as any)
+      ))
+
+    revalidatePath('/dashboard/servicos')
+  } catch (error) {
+    console.error('[v0] Erro ao deletar serviço:', error)
+    throw error
+  }
 }
 
-export async function addExpense(salonId: string, data: {
-  description: string
-  amount: string
+export async function createAppointment(salonId: string, appointmentData: {
+  clientName: string
+  clientPhone: string
+  serviceId?: string
+  appointmentDate: string
+  appointmentTime: string
+  price?: string
+  notes?: string
 }) {
-  const result = await db
-    .insert(expense)
-    .values({
-      salonId,
-      description: data.description,
-      amount: data.amount,
+  try {
+    const newAppointment = await db
+      .insert(appointments)
+      .values({
+        salonId: salonId as any,
+        serviceId: appointmentData.serviceId as any,
+        clientName: appointmentData.clientName,
+        clientPhone: appointmentData.clientPhone,
+        appointmentDate: appointmentData.appointmentDate as any,
+        appointmentTime: appointmentData.appointmentTime,
+        price: appointmentData.price,
+        notes: appointmentData.notes,
+      })
+      .returning()
+
+    revalidatePath('/dashboard/agendamentos')
+    return newAppointment[0]
+  } catch (error) {
+    console.error('[v0] Erro ao criar agendamento:', error)
+    throw error
+  }
+}
+
+export async function getAppointmentsBySalon(salonId: string) {
+  try {
+    return await db.query.appointments.findMany({
+      where: eq(appointments.salonId, salonId as any),
     })
-    .returning()
-
-  revalidatePath('/dashboard/financeiro')
-  return result[0]
+  } catch (error) {
+    console.error('[v0] Erro ao buscar agendamentos:', error)
+    return []
+  }
 }
 
-export async function getExpensesBySalon(salonId: string) {
-  return db
-    .select()
-    .from(expense)
-    .where(eq(expense.salonId, salonId))
+export async function addEmployee(salonId: string, employeeData: {
+  name: string
+  email: string
+  userId: string
+  phone?: string
+}) {
+  try {
+    const newEmployee = await db
+      .insert(employees)
+      .values({
+        salonId: salonId as any,
+        name: employeeData.name,
+        email: employeeData.email,
+        userId: employeeData.userId,
+        phone: employeeData.phone,
+        role: 'employee',
+      })
+      .returning()
+
+    revalidatePath('/dashboard/funcionarios')
+    return newEmployee[0]
+  } catch (error) {
+    console.error('[v0] Erro ao criar funcionário:', error)
+    throw error
+  }
 }
+
+export async function getEmployeesBySalon(salonId: string) {
+  try {
+    return await db.query.employees.findMany({
+      where: eq(employees.salonId, salonId as any),
+    })
+  } catch (error) {
+    console.error('[v0] Erro ao buscar funcionários:', error)
+    return []
+  }
+}
+
+export async function deleteEmployee(employeeId: string, salonId: string) {
+  try {
+    await db
+      .delete(employees)
+      .where(and(
+        eq(employees.id, employeeId as any),
+        eq(employees.salonId, salonId as any)
+      ))
+
+    revalidatePath('/dashboard/funcionarios')
+  } catch (error) {
+    console.error('[v0] Erro ao deletar funcionário:', error)
+    throw error
+  }
+}
+

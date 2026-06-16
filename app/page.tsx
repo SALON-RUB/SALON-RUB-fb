@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Scissors, Crown, User } from 'lucide-react'
@@ -8,8 +9,27 @@ import { AnimatedBackground } from '@/components/animated-background'
 import Link from 'next/link'
 
 export default function HomePage() {
+  const router = useRouter()
+
+  useEffect(() => {
+    // Verificar se há sessão ativa
+    const session = localStorage.getItem('user_session')
+    if (session) {
+      try {
+        const userData = JSON.parse(session)
+        if (userData.role === 'owner') {
+          router.push('/dashboard')
+        } else if (userData.role === 'employee') {
+          router.push('/dashboard/employee')
+        }
+      } catch {
+        // Erro ao parsear, continuar na home
+      }
+    }
+  }, [router])
+
   return (
-    <main className="min-h-screen bg-black flex flex-col relative overflow-hidden">
+    <main className="min-h-screen bg-background flex flex-col relative overflow-hidden">
       <AnimatedBackground />
       
       <div className="relative flex-1 flex flex-col items-center justify-center p-4 z-10">
@@ -23,7 +43,7 @@ export default function HomePage() {
           </div>
 
           <div className="grid gap-3 pt-4">
-            <Link href="/sign-in">
+            <Link href="/funcionario-login">
               <Card className="cursor-pointer hover:border-primary/50 transition-colors bg-card/40 backdrop-blur-sm border-primary/20">
                 <CardContent className="p-6">
                   <div className="flex items-center gap-4">
@@ -39,7 +59,7 @@ export default function HomePage() {
               </Card>
             </Link>
 
-            <Link href="/sign-in">
+            <Link href="/funcionario-login">
               <Card className="cursor-pointer hover:border-primary/50 transition-colors bg-card/40 backdrop-blur-sm border-primary/20">
                 <CardContent className="p-6">
                   <div className="flex items-center gap-4">
@@ -67,3 +87,4 @@ export default function HomePage() {
     </main>
   )
 }
+

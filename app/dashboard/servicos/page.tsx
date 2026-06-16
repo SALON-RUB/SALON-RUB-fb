@@ -1,19 +1,18 @@
 'use client'
 
 import { useState, useEffect, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
 import { DashboardLayout } from '@/components/dashboard-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Toast } from '@/components/toast'
 import { Scissors, Plus, X, Edit2, Trash2 } from 'lucide-react'
-import { createService, getServices, updateService, deleteService } from '@/app/actions/services'
+import { addService, getServicesBySalon, updateService, deleteService } from '@/app/actions/salon'
 
 export default function ServicosPage() {
-  const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [services, setServices] = useState<any[]>([])
+  const [salonId, setSalonId] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [showToast, setShowToast] = useState(false)
@@ -21,20 +20,52 @@ export default function ServicosPage() {
   const [toastType, setToastType] = useState<'success' | 'error'>('success')
   const [formData, setFormData] = useState({
     name: '',
-    category: 'corte',
+    category: 'Corte',
     duration: '30',
     price: '0',
   })
 
   useEffect(() => {
-    loadServices()
+    const carregarDados = async () => {
+      const userSession = localStorage.getItem('user_session')
+      if (!userSession) {
+        return
+      }
+      
+      try {
+        const userData = JSON.parse(userSession)
+        
+        // Se já tem salonId, usa direto
+        if (userData.salonId) {
+          setSalonId(userData.salonId)
+          const data = await getServicesBySalon(userData.salonId)
+          setServices(data)
+          return
+        }
+        
+        // Se não tem salonId, busca do banco pelo userId
+        const { getSalonById } = await import('@/app/actions/salon')
+        const salonSession = localStorage.getItem('salon_session')
+        if (salonSession) {
+          const salon = JSON.parse(salonSession)
+          setSalonId(salon.id)
+          const data = await getServicesBySalon(salon.id)
+          setServices(data)
+        }
+      } catch (error) {
+        console.error('[v0] Erro ao carregar dados:', error)
+      }
+    }
+    
+    carregarDados()
   }, [])
 
-  const loadServices = async () => {
+  const loadServices = async (id: string) => {
     try {
-      const data = await getServices()
+      const data = await getServicesBySalon(id)
       setServices(data)
     } catch (error: any) {
+      console.error('[v0] Erro ao carregar:', error)
       setToastMessage('Erro ao carregar serviços')
       setToastType('error')
       setShowToast(true)
@@ -42,8 +73,18 @@ export default function ServicosPage() {
   }
 
   const handleAddService = () => {
+    console.log('[v0] Salvando serviço com salonId:', salonId)
+    
     if (!formData.name || !formData.price || parseFloat(formData.price) === 0) {
       setToastMessage('Preencha nome, categoria e preço')
+      setToastType('error')
+      setShowToast(true)
+      return
+    }
+
+    if (!salonId) {
+      console.error('[v0] salonId é nulo!')
+      setToastMessage('Erro: Salão não identificado')
       setToastType('error')
       setShowToast(true)
       return
@@ -52,7 +93,7 @@ export default function ServicosPage() {
     startTransition(async () => {
       try {
         if (editingId) {
-          await updateService(editingId, {
+          await updateService(editingId, salonId, {
             name: formData.name,
             category: formData.category,
             duration: parseInt(formData.duration),
@@ -60,7 +101,7 @@ export default function ServicosPage() {
           })
           setToastMessage('Serviço atualizado com sucesso!')
         } else {
-          await createService({
+          await addService(salonId, {
             name: formData.name,
             category: formData.category,
             duration: parseInt(formData.duration),
@@ -69,13 +110,14 @@ export default function ServicosPage() {
           setToastMessage('Serviço criado com sucesso!')
         }
 
-        setFormData({ name: '', category: 'corte', duration: '30', price: '0' })
+        setFormData({ name: '', category: 'Corte', duration: '30', price: '0' })
         setEditingId(null)
         setShowForm(false)
         setToastType('success')
         setShowToast(true)
-        await loadServices()
+        await loadServices(salonId)
       } catch (error: any) {
+        console.error('[v0] Erro:', error)
         setToastMessage(error.message || 'Erro ao salvar serviço')
         setToastType('error')
         setShowToast(true)
@@ -83,33 +125,33 @@ export default function ServicosPage() {
     })
   }
 
-  const handleEdit = (service: any) => {
-    setEditingId(service.id)
+  const handleDeleteService = (serviceId: string) => {
+    if (!salonId) return
+
+    startTransition(async () => {
+      try {
+        await deleteService(serviceId, salonId)
+        setToastMessage('Serviço deletado com sucesso!')
+        setToastType('success')
+        setShowToast(true)
+        await loadServices(salonId)
+      } catch (error: any) {
+        setToastMessage(error.message || 'Erro ao deletar serviço')
+        setToastType('error')
+        setShowToast(true)
+      }
+    })
+  }
+
+  const handleEditService = (service: any) => {
     setFormData({
       name: service.name,
       category: service.category,
       duration: service.duration.toString(),
-      price: service.price.toString(),
+      price: service.price,
     })
+    setEditingId(service.id)
     setShowForm(true)
-  }
-
-  const handleDelete = (serviceId: string) => {
-    if (confirm('Tem certeza que deseja deletar este serviço?')) {
-      startTransition(async () => {
-        try {
-          await deleteService(serviceId)
-          setToastMessage('Serviço deletado com sucesso!')
-          setToastType('success')
-          setShowToast(true)
-          await loadServices()
-        } catch (error: any) {
-          setToastMessage(error.message || 'Erro ao deletar serviço')
-          setToastType('error')
-          setShowToast(true)
-        }
-      })
-    }
   }
 
   return (
@@ -122,110 +164,87 @@ export default function ServicosPage() {
       />
 
       <div className="p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-primary/20 rounded-lg">
-              <Scissors className="w-6 h-6 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold">Serviços</h1>
-              <p className="text-muted-foreground">Gerencie seus serviços e preços</p>
-            </div>
+        {/* Header */}
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-bold flex items-center gap-3">
+              <div className="p-3 bg-primary/20 rounded-lg">
+                <Scissors className="w-6 h-6 text-primary" />
+              </div>
+              Serviços
+            </h1>
+            <p className="text-muted-foreground mt-1">Gerencie seus serviços e preços</p>
           </div>
-          {!showForm && (
-            <Button
-              onClick={() => {
-                setShowForm(true)
-                setEditingId(null)
-                setFormData({ name: '', category: 'corte', duration: '30', price: '0' })
-              }}
-              className="gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              Novo Serviço
-            </Button>
-          )}
+          <Button onClick={() => setShowForm(true)} className="gap-2">
+            <Plus className="w-4 h-4" />
+            Novo Serviço
+          </Button>
         </div>
 
+        {/* Form */}
         {showForm && (
-          <Card className="border-primary/50 bg-primary/5">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>{editingId ? 'Editar Serviço' : 'Novo Serviço'}</CardTitle>
-                <button
-                  onClick={() => {
-                    setShowForm(false)
-                    setEditingId(null)
-                    setFormData({ name: '', category: 'corte', duration: '30', price: '0' })
-                  }}
-                  className="p-1 hover:bg-muted rounded"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
+          <Card className="border-primary/50 bg-card/50 backdrop-blur">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+              <CardTitle>{editingId ? 'Editar Serviço' : 'Novo Serviço'}</CardTitle>
+              <button
+                onClick={() => {
+                  setShowForm(false)
+                  setEditingId(null)
+                  setFormData({ name: '', category: 'Corte', duration: '30', price: '0' })
+                }}
+              >
+                <X className="w-5 h-5" />
+              </button>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Nome do Serviço</label>
+                <label className="text-sm font-medium">Nome do Serviço</label>
                 <Input
-                  placeholder="Ex: Corte Masculino"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  disabled={isPending}
+                  placeholder="Ex: Corte Masculino"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2">Categoria</label>
-                  <select
+                  <label className="text-sm font-medium">Categoria</label>
+                  <Input
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    disabled={isPending}
-                    className="w-full px-3 py-2 rounded-lg border border-border bg-background"
-                  >
-                    <option value="corte">Corte</option>
-                    <option value="barba">Barba</option>
-                    <option value="coloracao">Coloração</option>
-                    <option value="tratamento">Tratamento</option>
-                    <option value="outro">Outro</option>
-                  </select>
+                    placeholder="Ex: Corte"
+                  />
                 </div>
-
                 <div>
-                  <label className="block text-sm font-medium mb-2">Duração (min)</label>
+                  <label className="text-sm font-medium">Duração (min)</label>
                   <Input
                     type="number"
-                    min="15"
-                    max="240"
                     value={formData.duration}
                     onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
-                    disabled={isPending}
+                    placeholder="30"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">Preço (R$)</label>
+                <label className="text-sm font-medium">Preço (R$)</label>
                 <Input
                   type="number"
-                  min="0"
                   step="0.01"
                   value={formData.price}
                   onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                  disabled={isPending}
+                  placeholder="50.00"
                 />
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex gap-3 pt-4">
                 <Button
                   variant="outline"
                   onClick={() => {
                     setShowForm(false)
                     setEditingId(null)
-                    setFormData({ name: '', category: 'corte', duration: '30', price: '0' })
+                    setFormData({ name: '', category: 'Corte', duration: '30', price: '0' })
                   }}
-                  disabled={isPending}
                   className="flex-1"
                 >
                   Cancelar
@@ -238,48 +257,59 @@ export default function ServicosPage() {
           </Card>
         )}
 
-        <div className="grid gap-4">
-          {services.length === 0 ? (
-            <Card className="text-center p-8">
-              <p className="text-muted-foreground">Nenhum serviço cadastrado ainda</p>
-            </Card>
-          ) : (
-            services.map((service) => (
-              <Card key={service.id} className="hover:shadow-lg transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-lg">{service.name}</h3>
-                      <div className="flex gap-4 mt-2 text-sm text-muted-foreground">
-                        <span>{service.category}</span>
-                        <span>{service.duration} min</span>
-                        <span className="text-primary font-semibold">R$ {parseFloat(service.price).toFixed(2)}</span>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEdit(service)}
-                        disabled={isPending}
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleDelete(service.id)}
-                        disabled={isPending}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
+        {/* Services List */}
+        {services.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {services.map((service) => (
+              <Card key={service.id} className="hover:border-primary/50 transition-colors">
+                <CardHeader>
+                  <CardTitle className="text-lg">{service.name}</CardTitle>
+                  <p className="text-sm text-muted-foreground">{service.category}</p>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Duração:</span>
+                    <span className="font-medium">{service.duration} min</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Preço:</span>
+                    <span className="font-medium text-primary">R$ {service.price}</span>
+                  </div>
+                  <div className="flex gap-2 pt-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEditService(service)}
+                      className="flex-1 gap-2"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                      Editar
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDeleteService(service.id)}
+                      className="flex-1 gap-2 text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Deletar
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
-            ))
-          )}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <Card className="bg-muted/50">
+            <CardContent className="pt-6 text-center">
+              <p className="text-muted-foreground">Nenhum serviço cadastrado ainda</p>
+              <Button onClick={() => setShowForm(true)} variant="outline" className="mt-4 gap-2">
+                <Plus className="w-4 h-4" />
+                Criar Primeiro Serviço
+              </Button>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </DashboardLayout>
   )
