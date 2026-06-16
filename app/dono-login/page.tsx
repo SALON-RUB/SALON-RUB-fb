@@ -88,8 +88,15 @@ export default function OwnerLoginPage() {
         role: 'owner',
         salonId: salon.id,
         salonCode: salon.salonCode,
+        password: createData.password,
         loginTime: new Date().toISOString(),
       }
+      
+      // Salvar conta para login posterior
+      const allAccounts = localStorage.getItem('owner_accounts')
+      const accounts = allAccounts ? JSON.parse(allAccounts) : []
+      accounts.push(session)
+      localStorage.setItem('owner_accounts', JSON.stringify(accounts))
       
       localStorage.setItem('user_session', JSON.stringify(session))
       localStorage.setItem('salon_session', JSON.stringify(salon))
