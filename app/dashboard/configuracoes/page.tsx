@@ -6,11 +6,13 @@ import { DashboardLayout } from '@/components/dashboard-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { Toast } from '@/components/toast'
 import { Settings, Clock, Save } from 'lucide-react'
 
 export default function ConfiguracoesPage() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
+  const [showToast, setShowToast] = useState(false)
   const [config, setConfig] = useState({
     nomeSalon: '',
     telefone: '',
@@ -49,7 +51,7 @@ export default function ConfiguracoesPage() {
     if (userIndex >= 0) {
       users[userIndex].salon.config = config
       localStorage.setItem('salon_users', JSON.stringify(users))
-      alert('Configurações salvas com sucesso!')
+      setShowToast(true)
     }
   }
 
@@ -67,6 +69,12 @@ export default function ConfiguracoesPage() {
 
   return (
     <DashboardLayout>
+      <Toast
+        message="Configurações salvas com sucesso!"
+        type="success"
+        isVisible={showToast}
+        onClose={() => setShowToast(false)}
+      />
       <div className="p-6 space-y-6">
         <div>
           <h1 className="text-3xl font-bold">Configurações</h1>

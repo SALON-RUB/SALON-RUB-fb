@@ -5,12 +5,18 @@ import { useRouter } from 'next/navigation'
 import { DashboardLayout } from '@/components/dashboard-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Toast } from '@/components/toast'
+import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard'
 import { Copy, Check, Key } from 'lucide-react'
 
 export default function CodigoSalaoPage() {
   const router = useRouter()
+  const { copy } = useCopyToClipboard()
   const [user, setUser] = useState<any>(null)
   const [copied, setCopied] = useState(false)
+  const [copiedLink, setCopiedLink] = useState(false)
+  const [showToast, setShowToast] = useState(false)
+  const [toastMessage, setToastMessage] = useState('')
 
   useEffect(() => {
     const session = localStorage.getItem('salon_session')
@@ -22,23 +28,43 @@ export default function CodigoSalaoPage() {
     setUser(JSON.parse(session))
   }, [router])
 
-  const handleCopyCode = () => {
-    navigator.clipboard.writeText(user?.salonCode || '')
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+  const handleCopyCode = async () => {
+    const success = await copy(user?.salonCode || '')
+    if (success) {
+      setToastMessage('Código copiado com sucesso!')
+      setCopied(true)
+      setShowToast(true)
+      setTimeout(() => setCopied(false), 2000)
+    } else {
+      setToastMessage('Erro ao copiar código. Tente novamente.')
+      setShowToast(true)
+    }
   }
 
-  const handleCopyLink = () => {
+  const handleCopyLink = async () => {
     const link = `${window.location.origin}/cliente?codigo=${user?.salonCode}`
-    navigator.clipboard.writeText(link)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    const success = await copy(link)
+    if (success) {
+      setToastMessage('Link copiado com sucesso!')
+      setCopiedLink(true)
+      setShowToast(true)
+      setTimeout(() => setCopiedLink(false), 2000)
+    } else {
+      setToastMessage('Erro ao copiar link. Tente novamente.')
+      setShowToast(true)
+    }
   }
 
   if (!user) return null
 
   return (
     <DashboardLayout>
+      <Toast
+        message={toastMessage}
+        type={toastMessage.includes('Erro') ? 'error' : 'success'}
+        isVisible={showToast}
+        onClose={() => setShowToast(false)}
+      />
       <div className="p-6 space-y-6">
         <div>
           <h1 className="text-3xl font-bold">Código do Salão</h1>
