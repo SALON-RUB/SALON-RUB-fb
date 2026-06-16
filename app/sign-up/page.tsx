@@ -49,7 +49,9 @@ export default function SignUpPage() {
 
       if (response.data?.user) {
         toast.success('Conta criada com sucesso!')
-        router.push('/dashboard')
+        setTimeout(() => {
+          router.push('/sign-in')
+        }, 1500)
       } else {
         toast.error('Erro ao criar conta')
       }
