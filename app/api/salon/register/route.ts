@@ -1,6 +1,6 @@
 import { authClient } from '@/lib/auth-client'
 import { db } from '@/lib/db'
-import { salon } from '@/lib/db/schema'
+import { salons } from '@/lib/db/schema'
 import { NextRequest, NextResponse } from 'next/server'
 
 function generateSalonCode(): string {
@@ -31,13 +31,13 @@ export async function POST(request: NextRequest) {
 
     // Create salon
     const newSalon = await db
-      .insert(salon)
+      .insert(salons)
       .values({
-        userId,
+        ownerId: userId,
         name: salonName,
         phone,
         address,
-        code: generateSalonCode(),
+        salonCode: generateSalonCode(),
       })
       .returning()
 
