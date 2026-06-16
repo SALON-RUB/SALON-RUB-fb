@@ -64,8 +64,27 @@ export default function EmployeeLoginPage() {
     setIsLoading(true)
 
     try {
-      // Verificar se o código do salão existe
-      const salon = await getSalonByCode(createData.salonCode)
+      // Verificar se o código do salão existe no localStorage (contas criadas localmente)
+      let salon = null
+      
+      // Primeiro, procurar nos donos criados
+      const allOwnerAccounts = localStorage.getItem('owner_accounts')
+      const ownerAccounts = allOwnerAccounts ? JSON.parse(allOwnerAccounts) : []
+      
+      const ownerAccount = ownerAccounts.find((acc: any) => acc.salonCode === createData.salonCode)
+      if (ownerAccount) {
+        salon = {
+          id: ownerAccount.salonId,
+          salonCode: ownerAccount.salonCode,
+          name: ownerAccount.nomeSalao,
+        }
+      }
+      
+      // Se não encontrou localmente, tenta buscar do banco de dados
+      if (!salon) {
+        salon = await getSalonByCode(createData.salonCode)
+      }
+      
       if (!salon) {
         setToastMessage('Código do salão inválido')
         setToastType('error')
@@ -160,7 +179,26 @@ export default function EmployeeLoginPage() {
       }
 
       // Buscar salão
-      const salon = await getSalonByCode(account.salonCode)
+      let salon = null
+      
+      // Primeiro, procurar nos donos criados
+      const allOwnerAccounts = localStorage.getItem('owner_accounts')
+      const ownerAccounts = allOwnerAccounts ? JSON.parse(allOwnerAccounts) : []
+      
+      const ownerAccount = ownerAccounts.find((acc: any) => acc.salonCode === account.salonCode)
+      if (ownerAccount) {
+        salon = {
+          id: ownerAccount.salonId,
+          salonCode: ownerAccount.salonCode,
+          name: ownerAccount.nomeSalao,
+        }
+      }
+      
+      // Se não encontrou localmente, tenta buscar do banco de dados
+      if (!salon) {
+        salon = await getSalonByCode(account.salonCode)
+      }
+      
       if (!salon) {
         setToastMessage('Salão não encontrado')
         setToastType('error')
@@ -173,7 +211,7 @@ export default function EmployeeLoginPage() {
         userId: account.userId,
         email: account.email,
         fullName: account.fullName,
-        salonId: account.salonId,
+        salonId: salon.id,
         salonCode: account.salonCode,
         role: 'employee',
         loginTime: new Date().toISOString(),
