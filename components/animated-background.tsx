@@ -2,14 +2,22 @@
 
 import { useEffect, useRef } from 'react'
 
-export type AnimatedBackgroundVariant = 'default' | 'employee' | 'client' | 'owner'
+export type AnimatedBackgroundVariant = 'purple' | 'blue' | 'teal' | 'rose' | 'orange'
 
 interface AnimatedBackgroundProps {
   variant?: AnimatedBackgroundVariant
 }
 
-export function AnimatedBackground({ variant = 'default' }: AnimatedBackgroundProps) {
+export function AnimatedBackground({ variant = 'purple' }: AnimatedBackgroundProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+
+  const colorSchemes: Record<AnimatedBackgroundVariant, string[]> = {
+    purple: ['#8B5CF6', '#A78BFA', '#C4B5FD', '#DDD6FE'],
+    blue: ['#3B82F6', '#60A5FA', '#93C5FD', '#DBEAFE'],
+    teal: ['#14B8A6', '#2DD4BF', '#67E8F9', '#CCFBF1'],
+    rose: ['#EC4899', '#F472B6', '#FBCFE8', '#FDF2F8'],
+    orange: ['#F97316', '#FB923C', '#FED7AA', '#FFEDD5'],
+  }
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -33,16 +41,7 @@ export function AnimatedBackground({ variant = 'default' }: AnimatedBackgroundPr
 
     const particles: Particle[] = []
     const particleCount = 50
-    
-    // Variantes de cores para diferentes páginas
-    const colorVariants: Record<AnimatedBackgroundVariant, string[]> = {
-      default: ['#8B5CF6', '#A78BFA', '#C4B5FD', '#DDD6FE'], // Roxo/Azul
-      employee: ['#10B981', '#34D399', '#6EE7B7', '#A7F3D0'], // Verde/Turquesa
-      client: ['#EC4899', '#F472B6', '#F9A8D4', '#FBCFE8'], // Rosa/Roxo claro
-      owner: ['#F97316', '#FB923C', '#FDBA74', '#FED7AA'], // Laranja/Amarelo
-    }
-    
-    const colors = colorVariants[variant]
+    const colors = colorSchemes[variant]
 
     // Create particles
     for (let i = 0; i < particleCount; i++) {

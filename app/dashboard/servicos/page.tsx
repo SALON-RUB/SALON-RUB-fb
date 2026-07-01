@@ -138,6 +138,25 @@ export default function ServicosPage() {
         // Atualizar lista de serviços
         setSalonId(activeSalonId)
         await loadServices(activeSalonId)
+
+        // Sincronizar com localStorage para aparecer na página de clientes
+        const userSession = localStorage.getItem('user_session')
+        if (userSession) {
+          const userData = JSON.parse(userSession)
+          const salonSession = localStorage.getItem('salon_session')
+          if (salonSession) {
+            const salonData = JSON.parse(salonSession)
+            const ownerAccounts = JSON.parse(localStorage.getItem('owner_accounts') || '[]')
+            const accountIndex = ownerAccounts.findIndex((acc: any) => acc.salonId === salonData.id)
+            if (accountIndex >= 0) {
+              ownerAccounts[accountIndex].salon = {
+                ...ownerAccounts[accountIndex].salon,
+                services: await getServicesBySalon(activeSalonId)
+              }
+              localStorage.setItem('owner_accounts', JSON.stringify(ownerAccounts))
+            }
+          }
+        }
       } catch (error: any) {
         setToastMessage(error.message || 'Erro ao salvar serviço')
         setToastType('error')
