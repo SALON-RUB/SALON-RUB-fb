@@ -14,6 +14,7 @@ import {
   LogOut,
   Menu,
   X,
+  Gift,
 } from 'lucide-react'
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -46,6 +47,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     { label: 'Agendamentos', href: '/dashboard/agendamentos', icon: Calendar },
     { label: 'Serviços', href: '/dashboard/servicos', icon: Scissors },
     { label: 'Funcionários', href: '/dashboard/funcionarios', icon: Users },
+    { label: 'Pontos de Fidelização', href: '/dashboard/loyalty', icon: Gift },
     { label: 'Financeiro', href: '/dashboard/financeiro', icon: DollarSign },
     { label: 'Código do Salão', href: '/dashboard/codigo', icon: Key },
     { label: 'Configurações', href: '/dashboard/configuracoes', icon: Settings },

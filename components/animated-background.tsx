@@ -2,14 +2,16 @@
 
 import { useEffect, useRef } from 'react'
 
+export type AnimatedBackgroundVariant = 'purple' | 'blue' | 'teal' | 'rose' | 'orange'
+
 interface AnimatedBackgroundProps {
-  variant?: 'purple' | 'blue' | 'teal' | 'rose' | 'orange'
+  variant?: AnimatedBackgroundVariant
 }
 
 export function AnimatedBackground({ variant = 'purple' }: AnimatedBackgroundProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
-  const colorSchemes = {
+  const colorSchemes: Record<AnimatedBackgroundVariant, string[]> = {
     purple: ['#8B5CF6', '#A78BFA', '#C4B5FD', '#DDD6FE'],
     blue: ['#3B82F6', '#60A5FA', '#93C5FD', '#DBEAFE'],
     teal: ['#14B8A6', '#2DD4BF', '#67E8F9', '#CCFBF1'],

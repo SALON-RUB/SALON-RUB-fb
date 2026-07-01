@@ -27,33 +27,35 @@ export default function ServicosPage() {
 
   useEffect(() => {
     const carregarDados = async () => {
-      const userSession = localStorage.getItem('user_session')
-      if (!userSession) {
-        return
-      }
-      
       try {
-        const userData = JSON.parse(userSession)
-        
-        // Se já tem salonId, usa direto
-        if (userData.salonId) {
-          setSalonId(userData.salonId)
-          const data = await getServicesBySalon(userData.salonId)
-          setServices(data)
-          return
+        // Primeiro tenta user_session
+        const userSession = localStorage.getItem('user_session')
+        if (userSession) {
+          const userData = JSON.parse(userSession)
+          
+          if (userData.salonId) {
+            setSalonId(userData.salonId)
+            const data = await getServicesBySalon(userData.salonId)
+            setServices(data)
+            return
+          }
         }
         
-        // Se não tem salonId, busca do banco pelo userId
-        const { getSalonById } = await import('@/app/actions/salon')
+        // Se não tem salonId em user_session, tenta salon_session
         const salonSession = localStorage.getItem('salon_session')
         if (salonSession) {
           const salon = JSON.parse(salonSession)
-          setSalonId(salon.id)
-          const data = await getServicesBySalon(salon.id)
-          setServices(data)
+          
+          const salonIdToUse = salon.salonId || salon.id
+          if (salonIdToUse) {
+            setSalonId(salonIdToUse)
+            const data = await getServicesBySalon(salonIdToUse)
+            setServices(data)
+            return
+          }
         }
       } catch (error) {
-        console.error('[v0] Erro ao carregar dados:', error)
+        console.error('Erro ao carregar dados de serviços:', error)
       }
     }
     
@@ -73,8 +75,7 @@ export default function ServicosPage() {
   }
 
   const handleAddService = () => {
-    console.log('[v0] Salvando serviço com salonId:', salonId)
-    
+    // Validar campos do formulário
     if (!formData.name || !formData.price || parseFloat(formData.price) === 0) {
       setToastMessage('Preencha nome, categoria e preço')
       setToastType('error')
@@ -82,9 +83,27 @@ export default function ServicosPage() {
       return
     }
 
-    if (!salonId) {
-      console.error('[v0] salonId é nulo!')
-      setToastMessage('Erro: Salão não identificado')
+    // Garantir que temos um salonId válido
+    let activeSalonId = salonId
+    
+    if (!activeSalonId) {
+      const userSession = localStorage.getItem('user_session')
+      if (userSession) {
+        const userData = JSON.parse(userSession)
+        activeSalonId = userData.salonId
+      }
+      
+      if (!activeSalonId) {
+        const salonSession = localStorage.getItem('salon_session')
+        if (salonSession) {
+          const salon = JSON.parse(salonSession)
+          activeSalonId = salon.salonId || salon.id
+        }
+      }
+    }
+
+    if (!activeSalonId) {
+      setToastMessage('Erro: Salão não identificado. Recarregue a página.')
       setToastType('error')
       setShowToast(true)
       return
@@ -93,7 +112,7 @@ export default function ServicosPage() {
     startTransition(async () => {
       try {
         if (editingId) {
-          await updateService(editingId, salonId, {
+          await updateService(editingId, activeSalonId, {
             name: formData.name,
             category: formData.category,
             duration: parseInt(formData.duration),
@@ -101,7 +120,7 @@ export default function ServicosPage() {
           })
           setToastMessage('Serviço atualizado com sucesso!')
         } else {
-          await addService(salonId, {
+          await addService(activeSalonId, {
             name: formData.name,
             category: formData.category,
             duration: parseInt(formData.duration),
@@ -115,7 +134,10 @@ export default function ServicosPage() {
         setShowForm(false)
         setToastType('success')
         setShowToast(true)
-        await loadServices(salonId)
+        
+        // Atualizar lista de serviços
+        setSalonId(activeSalonId)
+        await loadServices(activeSalonId)
 
         // Sincronizar com localStorage para aparecer na página de clientes
         const userSession = localStorage.getItem('user_session')
@@ -129,14 +151,13 @@ export default function ServicosPage() {
             if (accountIndex >= 0) {
               ownerAccounts[accountIndex].salon = {
                 ...ownerAccounts[accountIndex].salon,
-                services: await getServicesBySalon(salonId)
+                services: await getServicesBySalon(activeSalonId)
               }
               localStorage.setItem('owner_accounts', JSON.stringify(ownerAccounts))
             }
           }
         }
       } catch (error: any) {
-        console.error('[v0] Erro:', error)
         setToastMessage(error.message || 'Erro ao salvar serviço')
         setToastType('error')
         setShowToast(true)
