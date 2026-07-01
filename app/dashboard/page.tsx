@@ -6,6 +6,7 @@ import { DashboardLayout } from '@/components/dashboard-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Calendar, DollarSign, Users, Scissors } from 'lucide-react'
 import { createSalonIfNotExists, getSalonByCode } from '@/app/actions/salon'
+import { AnimatedBackground } from '@/components/animated-background'
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -72,7 +73,10 @@ export default function DashboardPage() {
 
   return (
     <DashboardLayout>
-      <div className="p-6 space-y-6">
+      <div className="fixed inset-0 w-full h-full pointer-events-none">
+        <AnimatedBackground />
+      </div>
+      <div className="relative z-10 p-6 space-y-6">
         {/* Header */}
         <div>
           <h1 className="text-3xl font-bold">Dashboard</h1>
