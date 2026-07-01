@@ -2,7 +2,13 @@
 
 import { useEffect, useRef } from 'react'
 
-export function AnimatedBackground() {
+export type AnimatedBackgroundVariant = 'default' | 'employee' | 'client' | 'owner'
+
+interface AnimatedBackgroundProps {
+  variant?: AnimatedBackgroundVariant
+}
+
+export function AnimatedBackground({ variant = 'default' }: AnimatedBackgroundProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
@@ -27,7 +33,16 @@ export function AnimatedBackground() {
 
     const particles: Particle[] = []
     const particleCount = 50
-    const colors = ['#8B5CF6', '#A78BFA', '#C4B5FD', '#DDD6FE']
+    
+    // Variantes de cores para diferentes páginas
+    const colorVariants: Record<AnimatedBackgroundVariant, string[]> = {
+      default: ['#8B5CF6', '#A78BFA', '#C4B5FD', '#DDD6FE'], // Roxo/Azul
+      employee: ['#10B981', '#34D399', '#6EE7B7', '#A7F3D0'], // Verde/Turquesa
+      client: ['#EC4899', '#F472B6', '#F9A8D4', '#FBCFE8'], // Rosa/Roxo claro
+      owner: ['#F97316', '#FB923C', '#FDBA74', '#FED7AA'], // Laranja/Amarelo
+    }
+    
+    const colors = colorVariants[variant]
 
     // Create particles
     for (let i = 0; i < particleCount; i++) {

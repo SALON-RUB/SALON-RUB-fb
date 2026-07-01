@@ -38,20 +38,44 @@ export default function ConfiguracoesPage() {
     const sessionData = JSON.parse(session)
     setUser(sessionData)
 
+    // Buscar configuração do localStorage e sincronizar
     const users = JSON.parse(localStorage.getItem('salon_users') || '[]')
     const userData = users.find((u: any) => u.id === sessionData.userId)
+    
     if (userData?.salon?.config) {
       setConfig(userData.salon.config)
     }
   }, [router])
 
   const handleSaveConfig = () => {
-    const users = JSON.parse(localStorage.getItem('salon_users') || '[]')
-    const userIndex = users.findIndex((u: any) => u.id === user.id)
-    if (userIndex >= 0) {
-      users[userIndex].salon.config = config
-      localStorage.setItem('salon_users', JSON.stringify(users))
+    try {
+      // Salvar em salon_users
+      const users = JSON.parse(localStorage.getItem('salon_users') || '[]')
+      const userIndex = users.findIndex((u: any) => u.id === user.id)
+      
+      if (userIndex >= 0) {
+        if (!users[userIndex].salon) {
+          users[userIndex].salon = {}
+        }
+        users[userIndex].salon.config = config
+        localStorage.setItem('salon_users', JSON.stringify(users))
+      }
+      
+      // Sincronizar com owner_accounts se for dono
+      const ownerAccounts = JSON.parse(localStorage.getItem('owner_accounts') || '[]')
+      const ownerIndex = ownerAccounts.findIndex((acc: any) => acc.salonId === user.salonId)
+      
+      if (ownerIndex >= 0) {
+        if (!ownerAccounts[ownerIndex].salon) {
+          ownerAccounts[ownerIndex].salon = {}
+        }
+        ownerAccounts[ownerIndex].salon.config = config
+        localStorage.setItem('owner_accounts', JSON.stringify(ownerAccounts))
+      }
+      
       setShowToast(true)
+    } catch (error) {
+      console.error('Erro ao salvar configurações:', error)
     }
   }
 
