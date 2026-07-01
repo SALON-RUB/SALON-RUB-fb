@@ -160,13 +160,13 @@ export default function FinanceiroPage() {
 
         {/* Cards Principais */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="bg-gradient-to-br from-green-50 to-green-50/50 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800">
+          <Card className="bg-gradient-to-br from-success/10 to-success/5 dark:from-success/20 dark:to-success/10 border-success/30 dark:border-success/50">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Entradas</CardTitle>
-              <TrendingUp className="h-4 w-4 text-green-600" />
+              <TrendingUp className="h-4 w-4 text-success" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">R$ {financeiro.entradas.toFixed(2)}</div>
+              <div className="text-2xl font-bold text-success">R$ {financeiro.entradas.toFixed(2)}</div>
               <p className="text-xs text-muted-foreground mt-1">Total recebido</p>
             </CardContent>
           </Card>
@@ -188,7 +188,7 @@ export default function FinanceiroPage() {
               <DollarSign className="h-4 w-4 text-purple-600" />
             </CardHeader>
             <CardContent>
-              <div className={`text-2xl font-bold ${saldo >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              <div className={`text-2xl font-bold ${saldo >= 0 ? 'text-success' : 'text-destructive'}`}>
                 R$ {saldo.toFixed(2)}
               </div>
               <p className="text-xs text-muted-foreground mt-1">Saldo disponível</p>
@@ -302,12 +302,12 @@ export default function FinanceiroPage() {
                             {mov.tipo === 'entrada' ? (
                               <TrendingUp
                                 size={16}
-                                className="text-green-600 dark:text-green-400"
+                                className="text-success"
                               />
                             ) : (
                               <TrendingDown
                                 size={16}
-                                className="text-red-600 dark:text-red-400"
+                                className="text-destructive"
                               />
                             )}
                           </div>
@@ -322,8 +322,8 @@ export default function FinanceiroPage() {
                           <p
                             className={`font-bold ${
                               mov.tipo === 'entrada'
-                                ? 'text-green-600'
-                                : 'text-red-600'
+                                ? 'text-success'
+                                : 'text-destructive'
                             }`}
                           >
                             {mov.tipo === 'entrada' ? '+' : '-'} R$ {mov.valor.toFixed(2)}

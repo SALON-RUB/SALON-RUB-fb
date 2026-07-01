@@ -20,9 +20,15 @@ export function Toast({ message, type = 'success', duration = 3000, isVisible, o
   if (!isVisible) return null
 
   const bgColor = {
-    success: 'bg-green-500',
-    error: 'bg-red-500',
-    info: 'bg-blue-500',
+    success: 'bg-success',
+    error: 'bg-destructive',
+    info: 'bg-primary',
+  }[type]
+
+  const textColor = {
+    success: 'text-success-foreground',
+    error: 'text-destructive-foreground',
+    info: 'text-primary-foreground',
   }[type]
 
   const icon = {
@@ -33,7 +39,7 @@ export function Toast({ message, type = 'success', duration = 3000, isVisible, o
 
   return (
     <div className="fixed bottom-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-5">
-      <div className={`${bgColor} text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 max-w-sm`}>
+      <div className={`${bgColor} ${textColor} px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 max-w-sm`}>
         {icon}
         <span className="font-medium">{message}</span>
         <button onClick={onClose} className="ml-2 hover:opacity-80">
