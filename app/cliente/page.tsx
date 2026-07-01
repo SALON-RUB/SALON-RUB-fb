@@ -117,7 +117,7 @@ export default function ClientePage() {
 
   return (
     <main className="min-h-screen bg-background flex flex-col relative overflow-hidden">
-      <AnimatedBackground />
+      <AnimatedBackground variant="teal" />
 
       <div className="relative flex-1 flex flex-col items-center justify-center p-4 z-10">
         <div className="w-full max-w-2xl">

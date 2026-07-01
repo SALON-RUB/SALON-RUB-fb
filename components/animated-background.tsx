@@ -2,8 +2,20 @@
 
 import { useEffect, useRef } from 'react'
 
-export function AnimatedBackground() {
+interface AnimatedBackgroundProps {
+  variant?: 'purple' | 'blue' | 'teal' | 'rose' | 'orange'
+}
+
+export function AnimatedBackground({ variant = 'purple' }: AnimatedBackgroundProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+
+  const colorSchemes = {
+    purple: ['#8B5CF6', '#A78BFA', '#C4B5FD', '#DDD6FE'],
+    blue: ['#3B82F6', '#60A5FA', '#93C5FD', '#DBEAFE'],
+    teal: ['#14B8A6', '#2DD4BF', '#67E8F9', '#CCFBF1'],
+    rose: ['#EC4899', '#F472B6', '#FBCFE8', '#FDF2F8'],
+    orange: ['#F97316', '#FB923C', '#FED7AA', '#FFEDD5'],
+  }
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -27,7 +39,7 @@ export function AnimatedBackground() {
 
     const particles: Particle[] = []
     const particleCount = 50
-    const colors = ['#8B5CF6', '#A78BFA', '#C4B5FD', '#DDD6FE']
+    const colors = colorSchemes[variant]
 
     // Create particles
     for (let i = 0; i < particleCount; i++) {

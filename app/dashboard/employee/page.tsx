@@ -48,7 +48,7 @@ export default function EmployeeDashboardPage() {
 
   return (
     <main className="min-h-screen bg-background flex flex-col relative overflow-hidden">
-      <AnimatedBackground />
+      <AnimatedBackground variant="blue" />
 
       {/* Header */}
       <div className="relative z-10 border-b border-border bg-background/50 backdrop-blur-sm">
