@@ -119,7 +119,7 @@ export function AnimatedBackground({ variant = 'purple' }: AnimatedBackgroundPro
 
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
-  }, [])
+  }, [variant])
 
   return <canvas ref={canvasRef} className="fixed inset-0 w-full h-full bg-black/80" />
 }
