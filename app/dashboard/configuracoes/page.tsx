@@ -106,64 +106,6 @@ export default function ConfiguracoesPage() {
   const handleSaveConfig = () => {
     saveConfigToLocalStorage()
   }
-        users[userIndex].salon.config = config
-        localStorage.setItem('salon_users', JSON.stringify(users))
-      }
-      
-      // Sincronizar com owner_accounts se for dono
-      const ownerAccounts = JSON.parse(localStorage.getItem('owner_accounts') || '[]')
-      const ownerIndex = ownerAccounts.findIndex((acc: any) => acc.salonId === user.salonId)
-      
-      if (ownerIndex >= 0) {
-        if (!ownerAccounts[ownerIndex].salon) {
-          ownerAccounts[ownerIndex].salon = {}
-        }
-        ownerAccounts[ownerIndex].salon.config = config
-        localStorage.setItem('owner_accounts', JSON.stringify(ownerAccounts))
-      }
-      
-      setShowToast(true)
-    } catch (error) {
-      console.error('Erro ao salvar configurações:', error)
-=======
-  // Auto-save com debounce quando config muda
-  useEffect(() => {
-    if (!user) return
-
-    // Limpar timer anterior
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current)
-    }
-
-    // Definir novo timer
-    debounceTimerRef.current = setTimeout(() => {
-      saveConfigToLocalStorage()
-    }, 500) // Aguarda 500ms após mudança
-
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current)
-      }
-    }
-  }, [config, user])
-
-  const saveConfigToLocalStorage = useCallback(() => {
-    if (!user) return
-    
-    const users = JSON.parse(localStorage.getItem('salon_users') || '[]')
-    const userIndex = users.findIndex((u: any) => u.id === user.id)
-    if (userIndex >= 0) {
-      users[userIndex].salon.config = config
-      localStorage.setItem('salon_users', JSON.stringify(users))
-      setShowToast(true)
-      setTimeout(() => setShowToast(false), 2000)
->>>>>>> main
-    }
-  }, [user, config])
-
-  const handleSaveConfig = () => {
-    saveConfigToLocalStorage()
-  }
 
   if (!user) return null
 
