@@ -21,7 +21,7 @@ export default function FuncionariosPage() {
     name: '',
     email: '',
     phone: '',
-    role: 'employee' as 'employee' | 'manager',
+    role: 'employee' as 'employee' | 'owner',
   })
 
   useEffect(() => {
