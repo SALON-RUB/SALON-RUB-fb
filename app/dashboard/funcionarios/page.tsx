@@ -21,7 +21,7 @@ export default function FuncionariosPage() {
     name: '',
     email: '',
     phone: '',
-    role: 'employee' as 'employee' | 'manager',
+    role: 'employee' as 'employee' | 'owner',
   })
 
   useEffect(() => {
@@ -205,7 +205,7 @@ export default function FuncionariosPage() {
                     className="w-full px-3 py-2 rounded-lg border border-border bg-background"
                   >
                     <option value="employee">Funcionário</option>
-                    <option value="manager">Gerente</option>
+                    <option value="owner">Dono</option>
                   </select>
                 </div>
               </div>
@@ -255,7 +255,7 @@ export default function FuncionariosPage() {
                           </div>
                         )}
                         <div className="px-2 py-1 bg-primary/10 text-primary rounded text-xs font-medium">
-                          {employee.role === 'manager' ? 'Gerente' : 'Funcionário'}
+                          {employee.role === 'owner' ? 'Dono' : 'Funcionário'}
                         </div>
                       </div>
                     </div>

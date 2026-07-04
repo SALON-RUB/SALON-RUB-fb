@@ -29,7 +29,7 @@ export default function ClienteLoyaltyPage() {
 
   return (
     <main className="min-h-screen bg-background flex flex-col relative overflow-hidden">
-      <AnimatedBackground variant="client" />
+      <AnimatedBackground variant="rose" />
 
       <div className="relative flex-1 flex flex-col items-center justify-start p-4 z-10 pt-8">
         <div className="w-full max-w-4xl">

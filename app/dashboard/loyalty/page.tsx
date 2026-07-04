@@ -50,7 +50,7 @@ export default function LoyaltyPage() {
   return (
     <DashboardLayout>
       <div className="fixed inset-0 w-full h-full -z-10 pointer-events-none">
-        <AnimatedBackground variant="owner" />
+        <AnimatedBackground variant="purple" />
       </div>
 
       <div className="p-6 space-y-6 relative z-10">

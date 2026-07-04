@@ -6,12 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Scissors, Calendar, Clock, User } from 'lucide-react'
 import { AnimatedBackground } from '@/components/animated-background'
+import { createAppointment } from '@/app/actions/appointments'
 
 export default function ClientePage() {
   const [step, setStep] = useState<'codigo' | 'agendamento' | 'confirmacao'>('codigo')
   const [salonCode, setSalonCode] = useState('')
   const [salon, setSalon] = useState<any>(null)
+  const [services, setServices] = useState<any[]>([])
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
   // Dados do agendamento
   const [nomeCliente, setNomeCliente] = useState('')
@@ -22,92 +25,70 @@ export default function ClientePage() {
   const [observacoes, setObservacoes] = useState('')
   const [agendamentoConfirmado, setAgendamentoConfirmado] = useState<any>(null)
 
-  const handleEntrarComCodigo = () => {
+  const handleEntrarComCodigo = async () => {
     setError('')
+    setLoading(true)
+    
     if (!salonCode.trim()) {
       setError('Por favor insira o código do salão')
+      setLoading(false)
       return
     }
 
-    // Procurar nos donos criados (owner_accounts)
-    const allOwnerAccounts = localStorage.getItem('owner_accounts')
-    const ownerAccounts = allOwnerAccounts ? JSON.parse(allOwnerAccounts) : []
-    
-    const ownerAccount = ownerAccounts.find((acc: any) => acc.salonCode === salonCode.toUpperCase())
-
-    if (!ownerAccount) {
-      setError('Código do salão não encontrado')
-      return
-    }
-
-    // Formatar dados do salon para uso na interface
-    const salonData = {
-      id: ownerAccount.salonId,
-      salonCode: ownerAccount.salonCode,
-      salon: {
-        name: ownerAccount.nomeSalao,
-        services: ownerAccount.salon?.services || [],
-        appointments: ownerAccount.salon?.appointments || [],
+    try {
+      const response = await fetch(`/api/salons/${salonCode.toUpperCase()}`)
+      if (!response.ok) {
+        setError('Código do salão não encontrado')
+        setLoading(false)
+        return
       }
-    }
 
-    setSalon(salonData)
-    setStep('agendamento')
+      const salonData = await response.json()
+      setSalon(salonData)
+      setServices(salonData.services || [])
+      setStep('agendamento')
+    } catch (err) {
+      setError('Erro ao buscar informações do salão')
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const handleAgendar = () => {
+  const handleAgendar = async () => {
     setError('')
+    setLoading(true)
 
     if (!nomeCliente.trim() || !telefoneCliente.trim() || !servicoSelecionado || !dataSelecionada || !horaSelecionada) {
       setError('Por favor preencha todos os campos')
+      setLoading(false)
       return
     }
 
-    const servico = salon.salon?.services?.find((s: any) => s.id === servicoSelecionado)
+    try {
+      const result = await createAppointment({
+        salonCode: salonCode.toUpperCase(),
+        clientName: nomeCliente,
+        clientPhone: telefoneCliente,
+        serviceId: servicoSelecionado,
+        appointmentDate: dataSelecionada,
+        appointmentTime: horaSelecionada,
+        notes: observacoes,
+      })
 
-    const novoAgendamento = {
-      id: 'agd_' + Date.now(),
-      cliente: nomeCliente,
-      telefone: telefoneCliente,
-      servico: servico?.nome,
-      preco: servico?.preco,
-      data: dataSelecionada,
-      hora: horaSelecionada,
-      duracao: servico?.duracao,
-      observacoes,
-      status: 'agendado',
-      dataAgendamento: new Date().toISOString(),
+      const servico = services.find((s) => s.id === servicoSelecionado)
+      setAgendamentoConfirmado({
+        ...result,
+        serviceName: servico?.name,
+        servicePrice: servico?.price,
+      })
+      setStep('confirmacao')
+    } catch (err) {
+      setError('Erro ao agendar. Tente novamente.')
+      console.error(err)
+    } finally {
+      setLoading(false)
     }
-
-    // Atualizar no localStorage
-    const allOwnerAccounts = localStorage.getItem('owner_accounts')
-    const ownerAccounts = allOwnerAccounts ? JSON.parse(allOwnerAccounts) : []
-    
-    const indice = ownerAccounts.findIndex((acc: any) => acc.salonCode === salon.salonCode)
-    
-    if (indice !== -1) {
-      if (!ownerAccounts[indice].salon) {
-        ownerAccounts[indice].salon = {}
-      }
-      if (!ownerAccounts[indice].salon.appointments) {
-        ownerAccounts[indice].salon.appointments = []
-      }
-      ownerAccounts[indice].salon.appointments.push(novoAgendamento)
-      localStorage.setItem('owner_accounts', JSON.stringify(ownerAccounts))
-    }
-
-    setAgendamentoConfirmado(novoAgendamento)
-    setStep('confirmacao')
-  }
-
-  const handleNovoAgendamento = () => {
-    setNomeCliente('')
-    setTelefoneCliente('')
-    setServicoSelecionado('')
-    setDataSelecionada('')
-    setHoraSelecionada('')
-    setObservacoes('')
-    setStep('agendamento')
   }
 
   const horariosDisponiveis = Array.from({ length: 9 }, (_, i) => {
@@ -153,8 +134,13 @@ export default function ClientePage() {
                   </div>
                 )}
 
-                <Button onClick={handleEntrarComCodigo} className="w-full" size="lg">
-                  Continuar
+                <Button 
+                  onClick={handleEntrarComCodigo} 
+                  className="w-full" 
+                  size="lg"
+                  disabled={loading}
+                >
+                  {loading ? 'Buscando...' : 'Continuar'}
                 </Button>
               </CardContent>
             </Card>
@@ -190,9 +176,9 @@ export default function ClientePage() {
                     <Scissors className="w-4 h-4 text-primary" />
                     Selecione o Serviço
                   </h3>
-                  {salon.salon?.services && salon.salon.services.length > 0 ? (
+                  {services && services.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {salon.salon.services.map((servico: any) => (
+                      {services.map((servico: any) => (
                         <button
                           key={servico.id}
                           onClick={() => setServicoSelecionado(servico.id)}
@@ -202,9 +188,9 @@ export default function ClientePage() {
                               : 'border-border hover:border-primary/50'
                           }`}
                         >
-                          <p className="font-medium">{servico.nome}</p>
-                          <p className="text-sm text-muted-foreground">{servico.duracao} min</p>
-                          <p className="text-sm font-semibold text-primary">R$ {(servico.preco || 0).toFixed(2)}</p>
+                          <p className="font-medium">{servico.name}</p>
+                          <p className="text-sm text-muted-foreground">{servico.duration} min</p>
+                          <p className="text-sm font-semibold text-primary">R$ {parseFloat(servico.price || '0').toFixed(2)}</p>
                         </button>
                       ))}
                     </div>
@@ -271,14 +257,21 @@ export default function ClientePage() {
                     onClick={() => {
                       setSalonCode('')
                       setSalon(null)
+                      setServices([])
                       setStep('codigo')
                     }}
                     className="flex-1"
+                    disabled={loading}
                   >
                     Voltar
                   </Button>
-                  <Button onClick={handleAgendar} className="flex-1" size="lg">
-                    Agendar
+                  <Button 
+                    onClick={handleAgendar} 
+                    className="flex-1" 
+                    size="lg"
+                    disabled={loading}
+                  >
+                    {loading ? 'Agendando...' : 'Agendar'}
                   </Button>
                 </div>
               </CardContent>
@@ -299,42 +292,54 @@ export default function ClientePage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <p className="text-sm text-muted-foreground">Cliente</p>
-                      <p className="font-semibold">{agendamentoConfirmado.cliente}</p>
+                      <p className="font-semibold">{agendamentoConfirmado.clientName}</p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Telefone</p>
-                      <p className="font-semibold">{agendamentoConfirmado.telefone}</p>
+                      <p className="font-semibold">{agendamentoConfirmado.clientPhone}</p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Serviço</p>
-                      <p className="font-semibold">{agendamentoConfirmado.servico}</p>
+                      <p className="font-semibold">{agendamentoConfirmado.serviceName}</p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Valor</p>
-                      <p className="font-semibold text-primary">R$ {(agendamentoConfirmado.preco || 0).toFixed(2)}</p>
+                      <p className="font-semibold text-primary">R$ {parseFloat(agendamentoConfirmado.servicePrice || '0').toFixed(2)}</p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Data</p>
                       <p className="font-semibold">
-                        {new Date(agendamentoConfirmado.data).toLocaleDateString('pt-BR')}
+                        {new Date(agendamentoConfirmado.appointmentDate).toLocaleDateString('pt-BR')}
                       </p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Horário</p>
-                      <p className="font-semibold">{agendamentoConfirmado.hora}</p>
+                      <p className="font-semibold">{agendamentoConfirmado.appointmentTime}</p>
                     </div>
                   </div>
 
-                  {agendamentoConfirmado.observacoes && (
+                  {agendamentoConfirmado.notes && (
                     <div>
                       <p className="text-sm text-muted-foreground">Observações</p>
-                      <p className="font-semibold">{agendamentoConfirmado.observacoes}</p>
+                      <p className="font-semibold">{agendamentoConfirmado.notes}</p>
                     </div>
                   )}
                 </div>
 
                 <div className="flex gap-3">
-                  <Button onClick={handleNovoAgendamento} variant="outline" className="flex-1">
+                  <Button 
+                    onClick={() => {
+                      setNomeCliente('')
+                      setTelefoneCliente('')
+                      setServicoSelecionado('')
+                      setDataSelecionada('')
+                      setHoraSelecionada('')
+                      setObservacoes('')
+                      setStep('agendamento')
+                    }} 
+                    variant="outline" 
+                    className="flex-1"
+                  >
                     Novo Agendamento
                   </Button>
                   <Button

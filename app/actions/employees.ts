@@ -25,7 +25,7 @@ export async function addEmployee(employeeData: {
   name: string
   email: string
   phone?: string
-  role: 'employee' | 'manager'
+  role: 'employee' | 'owner'
 }) {
   const userId = await getUserId()
   const salon = await getSalonByUserId(userId)
@@ -61,7 +61,7 @@ export async function updateEmployee(
     name: string
     email: string
     phone?: string
-    role: 'employee' | 'manager'
+    role: 'employee' | 'owner'
   }
 ) {
   const userId = await getUserId()

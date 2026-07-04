@@ -46,7 +46,7 @@ export default function MeuLoyaltyPage() {
   return (
     <DashboardLayout>
       <div className="fixed inset-0 w-full h-full -z-10 pointer-events-none">
-        <AnimatedBackground variant="employee" />
+        <AnimatedBackground variant="teal" />
       </div>
 
       <div className="p-6 space-y-6 relative z-10">

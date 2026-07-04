@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Toast } from '@/components/toast'
 import { Scissors, ArrowLeft } from 'lucide-react'
-import { createSalonIfNotExists, getSalonByCode } from '@/app/actions/salon'
+import { createOwnerAccount, loginOwner } from '@/app/actions/auth'
 
 export default function OwnerLoginPage() {
   const router = useRouter()
@@ -66,40 +66,15 @@ export default function OwnerLoginPage() {
     setIsLoading(true)
 
     try {
-      const ownerId = `owner_${Date.now()}_${Math.random().toString(36).slice(2)}`
+      const result = await createOwnerAccount(createData)
       
-      // Criar salão com o nome fornecido
-      const salon = await createSalonIfNotExists(ownerId, createData.nomeSalao)
-      
-      if (!salon) {
-        setToastMessage('Erro ao criar salão')
+      if (!result.success) {
+        setToastMessage(result.error || 'Erro ao criar conta')
         setToastType('error')
         setShowToast(true)
         setIsLoading(false)
         return
       }
-      
-      const session = {
-        userId: ownerId,
-        numero: createData.numero,
-        email: createData.email,
-        fullName: createData.fullName,
-        nomeSalao: createData.nomeSalao,
-        role: 'owner',
-        salonId: salon.id,
-        salonCode: salon.salonCode,
-        password: createData.password,
-        loginTime: new Date().toISOString(),
-      }
-      
-      // Salvar conta para login posterior
-      const allAccounts = localStorage.getItem('owner_accounts')
-      const accounts = allAccounts ? JSON.parse(allAccounts) : []
-      accounts.push(session)
-      localStorage.setItem('owner_accounts', JSON.stringify(accounts))
-      
-      localStorage.setItem('user_session', JSON.stringify(session))
-      localStorage.setItem('salon_session', JSON.stringify(salon))
       
       setToastMessage('Conta criada com sucesso!')
       setToastType('success')
@@ -138,41 +113,16 @@ export default function OwnerLoginPage() {
     setIsLoading(true)
 
     try {
-      // Buscar conta existente no localStorage
-      const allAccounts = localStorage.getItem('owner_accounts')
-      const accounts = allAccounts ? JSON.parse(allAccounts) : []
+      const result = await loginOwner(loginData.email, loginData.password)
       
-      const account = accounts.find((acc: any) => acc.email === loginData.email && acc.password === loginData.password)
-      
-      if (!account) {
-        setToastMessage('Email ou senha incorretos')
+      if (!result.success) {
+        setToastMessage(result.error || 'Email ou senha incorretos')
         setToastType('error')
         setShowToast(true)
         setIsLoading(false)
         return
       }
 
-      // Recuperar dados da conta
-      const session = {
-        userId: account.userId,
-        numero: account.numero,
-        email: account.email,
-        fullName: account.fullName,
-        nomeSalao: account.nomeSalao,
-        role: 'owner',
-        salonId: account.salonId,
-        salonCode: account.salonCode,
-        loginTime: new Date().toISOString(),
-      }
-      
-      localStorage.setItem('user_session', JSON.stringify(session))
-      localStorage.setItem('salon_session', JSON.stringify({
-        id: account.salonId,
-        ownerId: account.userId,
-        name: account.nomeSalao,
-        salonCode: account.salonCode,
-      }))
-      
       setToastMessage('Login realizado com sucesso!')
       setToastType('success')
       setShowToast(true)
