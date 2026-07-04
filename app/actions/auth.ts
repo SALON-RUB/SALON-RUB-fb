@@ -85,11 +85,8 @@ export async function createOwnerAccount(data: {
   password: string
 }) {
   try {
-    console.log('[v0] Iniciando criação de conta para:', data.email)
-    
     // Verificar se o email já existe
     const existingUsers = await db.select().from(user).where(eq(user.email, data.email))
-    console.log('[v0] Verificação de email existente:', existingUsers.length)
 
     if (existingUsers.length > 0) {
       return { success: false, error: 'Email já cadastrado' }
@@ -100,7 +97,6 @@ export async function createOwnerAccount(data: {
     const hashedPassword = hashPassword(data.password)
     const now = new Date()
 
-    console.log('[v0] Inserindo usuário:', userId)
     await db.insert(user).values({
       id: userId,
       email: data.email,
@@ -115,7 +111,6 @@ export async function createOwnerAccount(data: {
     const salonId = crypto.randomUUID()
     const salonCode = Math.random().toString(36).slice(2, 8).toUpperCase()
 
-    console.log('[v0] Inserindo salão:', salonId, salonCode)
     await db.insert(salons).values({
       id: salonId,
       name: data.nomeSalao,
@@ -138,11 +133,8 @@ export async function createOwnerAccount(data: {
         salonCode: salonCode,
       }
     }
-    
-    console.log('[v0] Conta criada com sucesso:', userId)
   } catch (error) {
     console.error('[v0] Erro ao criar conta:', error)
-    console.error('[v0] Detalhes do erro:', JSON.stringify(error, null, 2))
     return { success: false, error: 'Erro ao criar conta' }
   }
 }
