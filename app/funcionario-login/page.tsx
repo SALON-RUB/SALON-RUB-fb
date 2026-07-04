@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Toast } from '@/components/toast'
 import { User, ArrowLeft } from 'lucide-react'
-import { getSalonByCode } from '@/app/actions/salon'
+import { createEmployeeAccount, loginEmployee } from '@/app/actions/auth'
 
 export default function EmployeeLoginPage() {
   const router = useRouter()
@@ -64,69 +64,16 @@ export default function EmployeeLoginPage() {
     setIsLoading(true)
 
     try {
-      // Verificar se o código do salão existe no localStorage (contas criadas localmente)
-      let salon = null
+      const result = await createEmployeeAccount(createData)
       
-      // Primeiro, procurar nos donos criados
-      const allOwnerAccounts = localStorage.getItem('owner_accounts')
-      const ownerAccounts = allOwnerAccounts ? JSON.parse(allOwnerAccounts) : []
-      
-      const ownerAccount = ownerAccounts.find((acc: any) => acc.salonCode === createData.salonCode)
-      if (ownerAccount) {
-        salon = {
-          id: ownerAccount.salonId,
-          salonCode: ownerAccount.salonCode,
-          name: ownerAccount.nomeSalao,
-        }
-      }
-      
-      // Se não encontrou localmente, tenta buscar do banco de dados
-      if (!salon) {
-        salon = await getSalonByCode(createData.salonCode)
-      }
-      
-      if (!salon) {
-        setToastMessage('Código do salão inválido')
+      if (!result.success) {
+        setToastMessage(result.error || 'Erro ao criar conta')
         setToastType('error')
         setShowToast(true)
         setIsLoading(false)
         return
       }
 
-      const employeeId = `emp_${Date.now()}_${Math.random().toString(36).slice(2)}`
-      
-      // Gerar senha aleatória para o funcionário
-      const tempPassword = Math.random().toString(36).slice(2, 10)
-      
-      // Salvar conta do funcionário
-      const allAccounts = localStorage.getItem('employee_accounts')
-      const accounts = allAccounts ? JSON.parse(allAccounts) : []
-      
-      const newAccount = {
-        userId: employeeId,
-        email: createData.email,
-        fullName: createData.fullName,
-        salonId: salon.id,
-        salonCode: createData.salonCode,
-        password: tempPassword,
-      }
-      
-      accounts.push(newAccount)
-      localStorage.setItem('employee_accounts', JSON.stringify(accounts))
-      
-      const session = {
-        userId: employeeId,
-        email: createData.email,
-        fullName: createData.fullName,
-        salonId: salon.id,
-        salonCode: createData.salonCode,
-        role: 'employee',
-        loginTime: new Date().toISOString(),
-      }
-      
-      localStorage.setItem('user_session', JSON.stringify(session))
-      localStorage.setItem('salon_session', JSON.stringify(salon))
-      
       setToastMessage('Conta criada com sucesso!')
       setToastType('success')
       setShowToast(true)
@@ -164,62 +111,16 @@ export default function EmployeeLoginPage() {
     setIsLoading(true)
 
     try {
-      // Buscar conta de funcionário
-      const allAccounts = localStorage.getItem('employee_accounts')
-      const accounts = allAccounts ? JSON.parse(allAccounts) : []
+      const result = await loginEmployee(loginData.email, loginData.password)
       
-      const account = accounts.find((acc: any) => acc.email === loginData.email && acc.password === loginData.password)
-      
-      if (!account) {
-        setToastMessage('Email ou senha incorretos')
+      if (!result.success) {
+        setToastMessage(result.error || 'Email ou senha incorretos')
         setToastType('error')
         setShowToast(true)
         setIsLoading(false)
         return
       }
 
-      // Buscar salão
-      let salon = null
-      
-      // Primeiro, procurar nos donos criados
-      const allOwnerAccounts = localStorage.getItem('owner_accounts')
-      const ownerAccounts = allOwnerAccounts ? JSON.parse(allOwnerAccounts) : []
-      
-      const ownerAccount = ownerAccounts.find((acc: any) => acc.salonCode === account.salonCode)
-      if (ownerAccount) {
-        salon = {
-          id: ownerAccount.salonId,
-          salonCode: ownerAccount.salonCode,
-          name: ownerAccount.nomeSalao,
-        }
-      }
-      
-      // Se não encontrou localmente, tenta buscar do banco de dados
-      if (!salon) {
-        salon = await getSalonByCode(account.salonCode)
-      }
-      
-      if (!salon) {
-        setToastMessage('Salão não encontrado')
-        setToastType('error')
-        setShowToast(true)
-        setIsLoading(false)
-        return
-      }
-
-      const session = {
-        userId: account.userId,
-        email: account.email,
-        fullName: account.fullName,
-        salonId: salon.id,
-        salonCode: account.salonCode,
-        role: 'employee',
-        loginTime: new Date().toISOString(),
-      }
-      
-      localStorage.setItem('user_session', JSON.stringify(session))
-      localStorage.setItem('salon_session', JSON.stringify(salon))
-      
       setToastMessage('Login realizado com sucesso!')
       setToastType('success')
       setShowToast(true)
