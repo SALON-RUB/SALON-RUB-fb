@@ -85,8 +85,12 @@ export async function createOwnerAccount(data: {
   password: string
 }) {
   try {
+    console.log('[v0] Iniciando createOwnerAccount com email:', data.email)
+    
     // Verificar se o email já existe
+    console.log('[v0] Verificando se email já existe...')
     const existingUsers = await db.select().from(user).where(eq(user.email, data.email))
+    console.log('[v0] Usuários existentes com esse email:', existingUsers.length)
 
     if (existingUsers.length > 0) {
       return { success: false, error: 'Email já cadastrado' }
@@ -95,30 +99,35 @@ export async function createOwnerAccount(data: {
     // Criar usuário
     const userId = `owner_${Date.now()}_${Math.random().toString(36).slice(2)}`
     const hashedPassword = hashPassword(data.password)
-    const now = new Date()
 
-    await db.insert(user).values({
-      id: userId,
-      email: data.email,
-      name: data.fullName,
-      password: hashedPassword,
-      emailVerified: false,
-      createdAt: now,
-      updatedAt: now,
-    } as any)
+    console.log('[v0] Inserindo novo usuário com ID:', userId)
+    const createdUser = await db
+      .insert(user)
+      .values({
+        id: userId,
+        email: data.email,
+        name: data.fullName,
+        password: hashedPassword,
+        emailVerified: false,
+      } as any)
+      .returning()
+    console.log('[v0] Usuário inserido com sucesso:', createdUser)
 
     // Criar salão
     const salonId = crypto.randomUUID()
     const salonCode = Math.random().toString(36).slice(2, 8).toUpperCase()
 
-    await db.insert(salons).values({
-      id: salonId,
-      name: data.nomeSalao,
-      ownerId: userId,
-      salonCode: salonCode,
-      createdAt: now,
-      updatedAt: now,
-    } as any)
+    console.log('[v0] Inserindo novo salão com ID:', salonId, 'código:', salonCode)
+    const createdSalon = await db
+      .insert(salons)
+      .values({
+        id: salonId,
+        name: data.nomeSalao,
+        ownerId: userId,
+        salonCode: salonCode,
+      } as any)
+      .returning()
+    console.log('[v0] Salão inserido com sucesso:', createdSalon)
 
     return {
       success: true,
@@ -134,8 +143,12 @@ export async function createOwnerAccount(data: {
       }
     }
   } catch (error) {
-    console.error('[v0] Erro ao criar conta:', error)
-    return { success: false, error: 'Erro ao criar conta' }
+    const msg = error instanceof Error ? error.message : String(error)
+    console.error('[v0] ERRO ao criar conta:', msg)
+    if (error instanceof Error) {
+      console.error('[v0] Stack:', error.stack)
+    }
+    return { success: false, error: `Erro ao criar conta: ${msg}` }
   }
 }
 
@@ -207,30 +220,31 @@ export async function createEmployeeAccount(data: {
     const userId = `emp_${Date.now()}_${Math.random().toString(36).slice(2)}`
     const tempPassword = Math.random().toString(36).slice(2, 10)
     const hashedPassword = hashPassword(tempPassword)
-    const now = new Date()
 
-    await db.insert(user).values({
-      id: userId,
-      email: data.email,
-      name: data.fullName,
-      password: hashedPassword,
-      emailVerified: false,
-      createdAt: now,
-      updatedAt: now,
-    } as any)
+    await db
+      .insert(user)
+      .values({
+        id: userId,
+        email: data.email,
+        name: data.fullName,
+        password: hashedPassword,
+        emailVerified: false,
+      } as any)
+      .returning()
 
     // Criar funcionário
     const employeeId = crypto.randomUUID()
-    await db.insert(employees).values({
-      id: employeeId,
-      userId: userId,
-      salonId: salon.id,
-      name: data.fullName,
-      email: data.email,
-      role: 'employee',
-      createdAt: now,
-      updatedAt: now,
-    } as any)
+    await db
+      .insert(employees)
+      .values({
+        id: employeeId,
+        userId: userId,
+        salonId: salon.id,
+        name: data.fullName,
+        email: data.email,
+        role: 'employee',
+      } as any)
+      .returning()
 
     return {
       success: true,
