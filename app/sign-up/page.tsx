@@ -123,7 +123,7 @@ export default function SignUpPage() {
           )}
 
           {success && (
-            <div className="bg-green-500/20 border border-green-500/50 text-green-600 rounded-lg p-3 mb-4 text-sm">
+            <div className="bg-success/20 border border-success/50 text-success rounded-lg p-3 mb-4 text-sm">
               {success}
             </div>
           )}
