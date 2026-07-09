@@ -204,7 +204,7 @@ export default function ClientePage() {
                         >
                           <p className="font-medium">{servico.nome}</p>
                           <p className="text-sm text-muted-foreground">{servico.duracao} min</p>
-                          <p className="text-sm font-semibold text-primary">R$ {(servico.preco || 0).toFixed(2)}</p>
+                          <p className="text-sm font-semibold text-primary">R$ {servico.preco.toFixed(2)}</p>
                         </button>
                       ))}
                     </div>
@@ -311,7 +311,7 @@ export default function ClientePage() {
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Valor</p>
-                      <p className="font-semibold text-primary">R$ {(agendamentoConfirmado.preco || 0).toFixed(2)}</p>
+                      <p className="font-semibold text-primary">R$ {agendamentoConfirmado.preco.toFixed(2)}</p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Data</p>
