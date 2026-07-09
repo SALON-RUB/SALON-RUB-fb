@@ -85,6 +85,7 @@ export async function addService(salonId: string, serviceData: {
       .returning()
 
     revalidatePath('/dashboard/servicos')
+    revalidatePath('/cliente')
     return newService[0]
   } catch (error) {
     console.error('[v0] Erro ao criar serviço:', error)
@@ -94,9 +95,12 @@ export async function addService(salonId: string, serviceData: {
 
 export async function getServicesBySalon(salonId: string) {
   try {
-    return await db.query.services.findMany({
+    // Buscar do banco de dados
+    const dbServices = await db.query.services.findMany({
       where: eq(services.salonId, salonId as any),
     })
+    
+    return dbServices
   } catch (error) {
     console.error('[v0] Erro ao buscar serviços:', error)
     return []

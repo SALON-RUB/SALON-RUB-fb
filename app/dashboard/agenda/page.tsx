@@ -33,11 +33,30 @@ export default function AgendaPage() {
     const sessionData = JSON.parse(session)
     setUser(sessionData)
 
+    // Buscar agendamentos de duas fontes: salon_users e owner_accounts
+    let allAppointments: any[] = []
+
+    // Buscar em salon_users (agendamentos criados pelo funcionário)
     const users = JSON.parse(localStorage.getItem('salon_users') || '[]')
     const userData = users.find((u: any) => u.id === sessionData.userId)
     if (userData?.salon?.appointments) {
-      setAppointments(userData.salon.appointments)
+      allAppointments = [...userData.salon.appointments]
     }
+
+    // Buscar em owner_accounts (agendamentos feitos por clientes)
+    const ownerAccounts = JSON.parse(localStorage.getItem('owner_accounts') || '[]')
+    const ownerAccount = ownerAccounts.find((acc: any) => acc.salonId === sessionData.salonId)
+    if (ownerAccount?.salon?.appointments) {
+      // Mesclar e evitar duplicatas
+      allAppointments = [
+        ...allAppointments,
+        ...ownerAccount.salon.appointments.filter(
+          (apt: any) => !allAppointments.find((a) => a.id === apt.id)
+        ),
+      ]
+    }
+
+    setAppointments(allAppointments)
   }, [router])
 
   const handleAddAppointment = () => {
@@ -78,11 +97,26 @@ export default function AgendaPage() {
     const updated = appointments.filter((a) => a.id !== id)
     setAppointments(updated)
 
+    // Remover de salon_users
     const users = JSON.parse(localStorage.getItem('salon_users') || '[]')
     const userIndex = users.findIndex((u: any) => u.id === user.id)
     if (userIndex >= 0) {
-      users[userIndex].salon.appointments = updated
+      users[userIndex].salon.appointments = updated.filter((a) => {
+        // Verificar se era do salon_users original
+        const originalApts = users[userIndex].salon.appointments || []
+        return originalApts.find((apt: any) => apt.id === a.id)
+      })
       localStorage.setItem('salon_users', JSON.stringify(users))
+    }
+
+    // Remover de owner_accounts também
+    const ownerAccounts = JSON.parse(localStorage.getItem('owner_accounts') || '[]')
+    const ownerIndex = ownerAccounts.findIndex((acc: any) => acc.salonId === user.salonId)
+    if (ownerIndex >= 0 && ownerAccounts[ownerIndex].salon?.appointments) {
+      ownerAccounts[ownerIndex].salon.appointments = ownerAccounts[ownerIndex].salon.appointments.filter(
+        (apt: any) => apt.id !== id
+      )
+      localStorage.setItem('owner_accounts', JSON.stringify(ownerAccounts))
     }
   }
 

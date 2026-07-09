@@ -22,37 +22,51 @@ export default function ClientePage() {
   const [observacoes, setObservacoes] = useState('')
   const [agendamentoConfirmado, setAgendamentoConfirmado] = useState<any>(null)
 
-  const handleEntrarComCodigo = () => {
+  const handleEntrarComCodigo = async () => {
     setError('')
     if (!salonCode.trim()) {
       setError('Por favor insira o código do salão')
       return
     }
 
-    // Procurar nos donos criados (owner_accounts)
-    const allOwnerAccounts = localStorage.getItem('owner_accounts')
-    const ownerAccounts = allOwnerAccounts ? JSON.parse(allOwnerAccounts) : []
-    
-    const ownerAccount = ownerAccounts.find((acc: any) => acc.salonCode === salonCode.toUpperCase())
+    try {
+      // Procurar nos donos criados (owner_accounts)
+      const allOwnerAccounts = localStorage.getItem('owner_accounts')
+      const ownerAccounts = allOwnerAccounts ? JSON.parse(allOwnerAccounts) : []
+      
+      const ownerAccount = ownerAccounts.find((acc: any) => acc.salonCode === salonCode.toUpperCase())
 
-    if (!ownerAccount) {
-      setError('Código do salão não encontrado')
-      return
-    }
-
-    // Formatar dados do salon para uso na interface
-    const salonData = {
-      id: ownerAccount.salonId,
-      salonCode: ownerAccount.salonCode,
-      salon: {
-        name: ownerAccount.nomeSalao,
-        services: ownerAccount.salon?.services || [],
-        appointments: ownerAccount.salon?.appointments || [],
+      if (!ownerAccount) {
+        setError('Código do salão não encontrado')
+        return
       }
-    }
 
-    setSalon(salonData)
-    setStep('agendamento')
+      // Buscar serviços do banco de dados usando a action
+      const { getServicesBySalon } = await import('@/app/actions/salon')
+      const services = await getServicesBySalon(ownerAccount.salonId)
+
+      // Formatar dados do salon para uso na interface
+      const salonData = {
+        id: ownerAccount.salonId,
+        salonCode: ownerAccount.salonCode,
+        salon: {
+          name: ownerAccount.nomeSalao,
+          services: services.length > 0 ? services.map((s: any) => ({
+            id: s.id,
+            nome: s.name || s.nome,
+            duracao: s.duration || s.duracao,
+            preco: s.price || s.preco,
+          })) : (ownerAccount.salon?.services || []),
+          appointments: ownerAccount.salon?.appointments || [],
+        }
+      }
+
+      setSalon(salonData)
+      setStep('agendamento')
+    } catch (err) {
+      console.error('Erro ao buscar serviços:', err)
+      setError('Erro ao carregar serviços do salão')
+    }
   }
 
   const handleAgendar = () => {
@@ -79,7 +93,7 @@ export default function ClientePage() {
       dataAgendamento: new Date().toISOString(),
     }
 
-    // Atualizar no localStorage
+    // Atualizar em owner_accounts
     const allOwnerAccounts = localStorage.getItem('owner_accounts')
     const ownerAccounts = allOwnerAccounts ? JSON.parse(allOwnerAccounts) : []
     
@@ -94,6 +108,23 @@ export default function ClientePage() {
       }
       ownerAccounts[indice].salon.appointments.push(novoAgendamento)
       localStorage.setItem('owner_accounts', JSON.stringify(ownerAccounts))
+    }
+
+    // Sincronizar também em salon_users para que aparça na dashboard do funcionário
+    const allSalonUsers = localStorage.getItem('salon_users')
+    const salonUsers = allSalonUsers ? JSON.parse(allSalonUsers) : []
+    
+    salonUsers.forEach((user: any) => {
+      if (user.salon?.salonId === salon.id) {
+        if (!user.salon.appointments) {
+          user.salon.appointments = []
+        }
+        user.salon.appointments.push(novoAgendamento)
+      }
+    })
+    
+    if (salonUsers.length > 0) {
+      localStorage.setItem('salon_users', JSON.stringify(salonUsers))
     }
 
     setAgendamentoConfirmado(novoAgendamento)
