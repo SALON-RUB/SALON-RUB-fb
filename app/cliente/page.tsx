@@ -204,7 +204,7 @@ export default function ClientePage() {
                         >
                           <p className="font-medium">{servico.nome}</p>
                           <p className="text-sm text-muted-foreground">{servico.duracao} min</p>
-                          <p className="text-sm font-semibold text-primary">R$ {servico.preco.toFixed(2)}</p>
+                          <p className="text-sm font-semibold text-primary">R$ {servico.preco ? parseFloat(servico.preco).toFixed(2) : '0.00'}</p>
                         </button>
                       ))}
                     </div>
