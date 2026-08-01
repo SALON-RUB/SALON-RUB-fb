@@ -1,41 +1,45 @@
-
 'use server'
 
-import { db } from '@/lib/db'
-import { salons, services, appointments, employees } from '@/lib/db/schema'
-import { eq, and } from 'drizzle-orm'
-import { revalidatePath } from 'next/cache'
 import crypto from 'crypto'
 
-// Para simplificar, vamos usar um sistema de autenticação baseado em localStorage
-// mas com verificação no banco de dados
+// Simular localStorage no servidor (em client components, localStorage real será usado)
+const storageMap: { [key: string]: string } = {}
+
+function getStorage(key: string): string | null {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem(key)
+  }
+  return storageMap[key] || null
+}
+
+function setStorage(key: string, value: string): void {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(key, value)
+  } else {
+    storageMap[key] = value
+  }
+}
 
 export async function createSalonIfNotExists(userId: string, name: string = 'Meu Salão') {
   try {
-    // Verificar se já existe
-    const existing = await db.query.salons.findFirst({
-      where: eq(salons.ownerId, userId),
-    })
+    // Buscar dono no localStorage
+    const accounts = JSON.parse(getStorage('owner_accounts') || '[]')
+    const account = accounts.find((acc: any) => acc.userId === userId)
 
-    if (existing) return existing
+    if (!account) {
+      return null
+    }
 
-    // Gerar código único
-    const salonCode = crypto
-      .randomBytes(3)
-      .toString('hex')
-      .toUpperCase()
-      .slice(0, 7)
+    // Se já tem salonCode, retornar
+    if (account.salonCode) {
+      return {
+        id: `salon_${account.userId}`,
+        name: account.nomeSalao,
+        salonCode: account.salonCode,
+      }
+    }
 
-    const newSalon = await db
-      .insert(salons)
-      .values({
-        ownerId: userId,
-        name,
-        salonCode,
-      })
-      .returning()
-
-    return newSalon[0]
+    return null
   } catch (error) {
     console.error('[v0] Erro ao criar salão:', error)
     return null
@@ -44,10 +48,18 @@ export async function createSalonIfNotExists(userId: string, name: string = 'Meu
 
 export async function getSalonByCode(code: string) {
   try {
-    const salon = await db.query.salons.findFirst({
-      where: eq(salons.salonCode, code),
-    })
-    return salon
+    const accounts = JSON.parse(getStorage('owner_accounts') || '[]')
+    const account = accounts.find((acc: any) => acc.salonCode === code)
+
+    if (account) {
+      return {
+        id: `salon_${account.userId}`,
+        name: account.nomeSalao,
+        salonCode: account.salonCode,
+      }
+    }
+
+    return null
   } catch (error) {
     console.error('[v0] Erro ao buscar salão:', error)
     return null
@@ -56,81 +68,71 @@ export async function getSalonByCode(code: string) {
 
 export async function getSalonById(salonId: string) {
   try {
-    const salon = await db.query.salons.findFirst({
-      where: eq(salons.id, salonId as any),
-    })
-    return salon
+    const accounts = JSON.parse(getStorage('owner_accounts') || '[]')
+    const account = accounts.find((acc: any) => `salon_${acc.userId}` === salonId)
+
+    if (account) {
+      return {
+        id: salonId,
+        name: account.nomeSalao,
+        salonCode: account.salonCode,
+      }
+    }
+
+    return null
   } catch (error) {
     console.error('[v0] Erro ao buscar salão:', error)
     return null
   }
 }
 
-export async function addService(salonId: string, serviceData: {
-  name: string
-  category: string
-  duration: number
-  price: string
-}) {
+export async function addService(salonId: string, service: any) {
   try {
-    const newService = await db
-      .insert(services)
-      .values({
-        salonId: salonId as any,
-        name: serviceData.name,
-        category: serviceData.category,
-        duration: serviceData.duration,
-        price: serviceData.price,
-      })
-      .returning()
+    const services = JSON.parse(getStorage('services') || '[]')
+    
+    const newService = {
+      id: crypto.randomUUID(),
+      salonId,
+      ...service,
+      createdAt: new Date().toISOString(),
+    }
 
-    revalidatePath('/dashboard/servicos')
-    return newService[0]
+    services.push(newService)
+    setStorage('services', JSON.stringify(services))
+
+    return newService
   } catch (error) {
-    console.error('[v0] Erro ao criar serviço:', error)
+    console.error('[v0] Erro ao adicionar serviço:', error)
     throw error
   }
 }
 
 export async function getServicesBySalon(salonId: string) {
   try {
-    return await db.query.services.findMany({
-      where: eq(services.salonId, salonId as any),
-    })
+    const services = JSON.parse(getStorage('services') || '[]')
+    return services.filter((s: any) => s.salonId === salonId)
   } catch (error) {
     console.error('[v0] Erro ao buscar serviços:', error)
     return []
   }
 }
 
-export async function updateService(
-  serviceId: string,
-  salonId: string,
-  serviceData: {
-    name: string
-    category: string
-    duration: number
-    price: string
-  }
-) {
+export async function updateService(serviceId: string, salonId: string, updates: any) {
   try {
-    const updated = await db
-      .update(services)
-      .set({
-        name: serviceData.name,
-        category: serviceData.category,
-        duration: serviceData.duration,
-        price: serviceData.price,
-        updatedAt: new Date(),
-      })
-      .where(and(
-        eq(services.id, serviceId as any),
-        eq(services.salonId, salonId as any)
-      ))
-      .returning()
+    const services = JSON.parse(getStorage('services') || '[]')
+    const index = services.findIndex((s: any) => s.id === serviceId && s.salonId === salonId)
 
-    revalidatePath('/dashboard/servicos')
-    return updated[0]
+    if (index >= 0) {
+      services[index] = {
+        ...services[index],
+        ...updates,
+        updatedAt: new Date().toISOString(),
+      }
+      setStorage('services', JSON.stringify(services))
+      return services[index]
+    }
+
+    throw new Error('Serviço não encontrado')
   } catch (error) {
     console.error('[v0] Erro ao atualizar serviço:', error)
     throw error
@@ -139,114 +141,12 @@ export async function updateService(
 
 export async function deleteService(serviceId: string, salonId: string) {
   try {
-    await db
-      .delete(services)
-      .where(and(
-        eq(services.id, serviceId as any),
-        eq(services.salonId, salonId as any)
-      ))
-
-    revalidatePath('/dashboard/servicos')
+    const services = JSON.parse(getStorage('services') || '[]')
+    const filtered = services.filter((s: any) => !(s.id === serviceId && s.salonId === salonId))
+    setStorage('services', JSON.stringify(filtered))
+    return true
   } catch (error) {
     console.error('[v0] Erro ao deletar serviço:', error)
     throw error
   }
 }
-
-export async function createAppointment(salonId: string, appointmentData: {
-  clientName: string
-  clientPhone: string
-  serviceId?: string
-  appointmentDate: string
-  appointmentTime: string
-  price?: string
-  notes?: string
-}) {
-  try {
-    const newAppointment = await db
-      .insert(appointments)
-      .values({
-        salonId: salonId as any,
-        serviceId: appointmentData.serviceId as any,
-        clientName: appointmentData.clientName,
-        clientPhone: appointmentData.clientPhone,
-        appointmentDate: appointmentData.appointmentDate as any,
-        appointmentTime: appointmentData.appointmentTime,
-        price: appointmentData.price,
-        notes: appointmentData.notes,
-      })
-      .returning()
-
-    revalidatePath('/dashboard/agendamentos')
-    return newAppointment[0]
-  } catch (error) {
-    console.error('[v0] Erro ao criar agendamento:', error)
-    throw error
-  }
-}
-
-export async function getAppointmentsBySalon(salonId: string) {
-  try {
-    return await db.query.appointments.findMany({
-      where: eq(appointments.salonId, salonId as any),
-    })
-  } catch (error) {
-    console.error('[v0] Erro ao buscar agendamentos:', error)
-    return []
-  }
-}
-
-export async function addEmployee(salonId: string, employeeData: {
-  name: string
-  email: string
-  userId: string
-  phone?: string
-}) {
-  try {
-    const newEmployee = await db
-      .insert(employees)
-      .values({
-        salonId: salonId as any,
-        name: employeeData.name,
-        email: employeeData.email,
-        userId: employeeData.userId,
-        phone: employeeData.phone,
-        role: 'employee',
-      })
-      .returning()
-
-    revalidatePath('/dashboard/funcionarios')
-    return newEmployee[0]
-  } catch (error) {
-    console.error('[v0] Erro ao criar funcionário:', error)
-    throw error
-  }
-}
-
-export async function getEmployeesBySalon(salonId: string) {
-  try {
-    return await db.query.employees.findMany({
-      where: eq(employees.salonId, salonId as any),
-    })
-  } catch (error) {
-    console.error('[v0] Erro ao buscar funcionários:', error)
-    return []
-  }
-}
-
-export async function deleteEmployee(employeeId: string, salonId: string) {
-  try {
-    await db
-      .delete(employees)
-      .where(and(
-        eq(employees.id, employeeId as any),
-        eq(employees.salonId, salonId as any)
-      ))
-
-    revalidatePath('/dashboard/funcionarios')
-  } catch (error) {
-    console.error('[v0] Erro ao deletar funcionário:', error)
-    throw error
-  }
-}
-
