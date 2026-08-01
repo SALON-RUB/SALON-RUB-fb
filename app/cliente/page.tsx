@@ -162,7 +162,7 @@ export default function ClientePage() {
           {step === 'agendamento' && salon && (
             <Card className="bg-card/95 backdrop-blur border-border">
               <CardHeader>
-                <CardTitle>{salon.salon.name || 'Agende seu Horário'}</CardTitle>
+                <CardTitle>{salon.name || 'Agende seu Horário'}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div>
