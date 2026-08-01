@@ -1,58 +1,67 @@
 'use server'
 
-import { auth } from '@/lib/auth'
-import { db } from '@/lib/db'
-import { salons, employees } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
-import { headers } from 'next/headers'
-import { revalidatePath } from 'next/cache'
+import crypto from 'crypto'
 
-async function getUserId() {
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session?.user) throw new Error('Não autorizado')
-  return session.user.id
+function getStorage(key: string): string | null {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem(key)
+  }
+  return null
 }
 
-async function getSalonByUserId(userId: string) {
-  const salon = await db.query.salons.findFirst({
-    where: eq(salons.ownerId, userId),
-  })
-  if (!salon) throw new Error('Salão não encontrado')
-  return salon
+function setStorage(key: string, value: string): void {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(key, value)
+  }
 }
 
 export async function addEmployee(employeeData: {
   name: string
   email: string
   phone?: string
-  role: 'employee' | 'manager'
+  role: 'employee' | 'owner'
 }) {
-  const userId = await getUserId()
-  const salon = await getSalonByUserId(userId)
+  try {
+    const employees = JSON.parse(getStorage('employee_accounts') || '[]')
 
-  const newEmployee = await db
-    .insert(employees)
-    .values({
-      salonId: salon.id,
+    const newEmployee = {
+      id: crypto.randomUUID(),
       userId: `employee_${Date.now()}`,
       name: employeeData.name,
       email: employeeData.email,
-      phone: employeeData.phone,
+      phone: employeeData.phone || '',
       role: employeeData.role,
-    })
-    .returning()
+      createdAt: new Date().toISOString(),
+    }
 
-  revalidatePath('/dashboard/funcionarios')
-  return newEmployee[0]
+    employees.push(newEmployee)
+    setStorage('employee_accounts', JSON.stringify(employees))
+
+    return newEmployee
+  } catch (error) {
+    console.error('[v0] Erro ao adicionar funcionário:', error)
+    throw error
+  }
 }
 
 export async function getEmployees() {
-  const userId = await getUserId()
-  const salon = await getSalonByUserId(userId)
+  try {
+    const userSession = getStorage('user_session')
+    if (!userSession) return []
 
-  return db.query.employees.findMany({
-    where: eq(employees.salonId, salon.id),
-  })
+    const userData = JSON.parse(userSession)
+    const employees = JSON.parse(getStorage('employee_accounts') || '[]')
+
+    // Se for owner, retornar todos os funcionários
+    if (userData.role === 'owner') {
+      return employees.filter((e: any) => e.salonCode === userData.salonCode)
+    }
+
+    return []
+  } catch (error) {
+    console.error('[v0] Erro ao buscar funcionários:', error)
+    return []
+  }
 }
 
 export async function updateEmployee(
@@ -61,39 +70,38 @@ export async function updateEmployee(
     name: string
     email: string
     phone?: string
-    role: 'employee' | 'manager'
+    role: 'employee' | 'owner'
   }
 ) {
-  const userId = await getUserId()
-  const salon = await getSalonByUserId(userId)
+  try {
+    const employees = JSON.parse(getStorage('employee_accounts') || '[]')
+    const index = employees.findIndex((e: any) => e.id === employeeId)
 
-  const updated = await db
-    .update(employees)
-    .set({
-      name: employeeData.name,
-      email: employeeData.email,
-      phone: employeeData.phone,
-      role: employeeData.role,
-      updatedAt: new Date(),
-    })
-    .where(
-      eq(employees.salonId, salon.id) && eq(employees.id, employeeId as any)
-    )
-    .returning()
+    if (index >= 0) {
+      employees[index] = {
+        ...employees[index],
+        ...employeeData,
+        updatedAt: new Date().toISOString(),
+      }
+      setStorage('employee_accounts', JSON.stringify(employees))
+      return employees[index]
+    }
 
-  revalidatePath('/dashboard/funcionarios')
-  return updated[0]
+    throw new Error('Funcionário não encontrado')
+  } catch (error) {
+    console.error('[v0] Erro ao atualizar funcionário:', error)
+    throw error
+  }
 }
 
 export async function deleteEmployee(employeeId: string) {
-  const userId = await getUserId()
-  const salon = await getSalonByUserId(userId)
-
-  await db
-    .delete(employees)
-    .where(
-      eq(employees.salonId, salon.id) && eq(employees.id, employeeId as any)
-    )
-
-  revalidatePath('/dashboard/funcionarios')
+  try {
+    const employees = JSON.parse(getStorage('employee_accounts') || '[]')
+    const filtered = employees.filter((e: any) => e.id !== employeeId)
+    setStorage('employee_accounts', JSON.stringify(filtered))
+    return true
+  } catch (error) {
+    console.error('[v0] Erro ao deletar funcionário:', error)
+    throw error
+  }
 }

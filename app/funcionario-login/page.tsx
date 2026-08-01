@@ -7,14 +7,12 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Toast } from '@/components/toast'
 import { User, ArrowLeft } from 'lucide-react'
-import { getSalonByCode } from '@/app/actions/salon'
 
 export default function EmployeeLoginPage() {
   const router = useRouter()
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
   const [toastType, setToastType] = useState<'success' | 'error'>('success')
-  const [isLoading, setIsLoading] = useState(false)
   const [mode, setMode] = useState<'choice' | 'create' | 'login'>('choice')
   
   const [createData, setCreateData] = useState({
@@ -44,7 +42,7 @@ export default function EmployeeLoginPage() {
     }))
   }
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const handleCreate = (e: React.FormEvent) => {
     e.preventDefault()
     
     if (!createData.fullName || !createData.email || !createData.salonCode) {
@@ -61,90 +59,51 @@ export default function EmployeeLoginPage() {
       return
     }
 
-    setIsLoading(true)
+    // Verificar se salão existe
+    const owners = JSON.parse(localStorage.getItem('owner_accounts') || '[]')
+    const salonExists = owners.find((acc: any) => acc.salonCode === createData.salonCode.toUpperCase())
 
-    try {
-      // Verificar se o código do salão existe no localStorage (contas criadas localmente)
-      let salon = null
-      
-      // Primeiro, procurar nos donos criados
-      const allOwnerAccounts = localStorage.getItem('owner_accounts')
-      const ownerAccounts = allOwnerAccounts ? JSON.parse(allOwnerAccounts) : []
-      
-      const ownerAccount = ownerAccounts.find((acc: any) => acc.salonCode === createData.salonCode)
-      if (ownerAccount) {
-        salon = {
-          id: ownerAccount.salonId,
-          salonCode: ownerAccount.salonCode,
-          name: ownerAccount.nomeSalao,
-        }
-      }
-      
-      // Se não encontrou localmente, tenta buscar do banco de dados
-      if (!salon) {
-        salon = await getSalonByCode(createData.salonCode)
-      }
-      
-      if (!salon) {
-        setToastMessage('Código do salão inválido')
-        setToastType('error')
-        setShowToast(true)
-        setIsLoading(false)
-        return
-      }
-
-      const employeeId = `emp_${Date.now()}_${Math.random().toString(36).slice(2)}`
-      
-      // Gerar senha aleatória para o funcionário
-      const tempPassword = Math.random().toString(36).slice(2, 10)
-      
-      // Salvar conta do funcionário
-      const allAccounts = localStorage.getItem('employee_accounts')
-      const accounts = allAccounts ? JSON.parse(allAccounts) : []
-      
-      const newAccount = {
-        userId: employeeId,
-        email: createData.email,
-        fullName: createData.fullName,
-        salonId: salon.id,
-        salonCode: createData.salonCode,
-        password: tempPassword,
-      }
-      
-      accounts.push(newAccount)
-      localStorage.setItem('employee_accounts', JSON.stringify(accounts))
-      
-      const session = {
-        userId: employeeId,
-        email: createData.email,
-        fullName: createData.fullName,
-        salonId: salon.id,
-        salonCode: createData.salonCode,
-        role: 'employee',
-        loginTime: new Date().toISOString(),
-      }
-      
-      localStorage.setItem('user_session', JSON.stringify(session))
-      localStorage.setItem('salon_session', JSON.stringify(salon))
-      
-      setToastMessage('Conta criada com sucesso!')
-      setToastType('success')
-      setShowToast(true)
-      
-      setTimeout(() => {
-        router.push('/dashboard/employee')
-      }, 1000)
-    } catch (error) {
-      console.error('[v0] Erro ao criar conta:', error)
-      setToastMessage('Erro ao criar conta')
+    if (!salonExists) {
+      setToastMessage('Código do salão inválido')
       setToastType('error')
       setShowToast(true)
-    } finally {
-      setIsLoading(false)
+      return
     }
+
+    // Salvar conta do funcionário
+    const employees = JSON.parse(localStorage.getItem('employee_accounts') || '[]')
+    
+    if (employees.find((emp: any) => emp.email === createData.email)) {
+      setToastMessage('Email já cadastrado')
+      setToastType('error')
+      setShowToast(true)
+      return
+    }
+
+    const tempPassword = Math.random().toString(36).slice(2, 10)
+    const newEmployee = {
+      userId: `emp_${Date.now()}`,
+      fullName: createData.fullName,
+      email: createData.email,
+      salonCode: createData.salonCode.toUpperCase(),
+      password: tempPassword,
+      role: 'employee',
+    }
+
+    employees.push(newEmployee)
+    localStorage.setItem('employee_accounts', JSON.stringify(employees))
+    localStorage.setItem('user_session', JSON.stringify(newEmployee))
+
+    setToastMessage(`Conta criada! Senha: ${tempPassword}`)
+    setToastType('success')
+    setShowToast(true)
+    
+    setTimeout(() => {
+      router.push('/dashboard/employee')
+    }, 1500)
   }
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = (e: React.FormEvent) => {
     e.preventDefault()
     
     if (!loginData.email || !loginData.password) {
@@ -154,273 +113,160 @@ export default function EmployeeLoginPage() {
       return
     }
 
-    if (!loginData.email.includes('@')) {
-      setToastMessage('Email inválido')
+    // Buscar funcionário
+    const employees = JSON.parse(localStorage.getItem('employee_accounts') || '[]')
+    const employee = employees.find((emp: any) => emp.email === loginData.email && emp.password === loginData.password)
+
+    if (!employee) {
+      setToastMessage('Email ou senha incorretos')
       setToastType('error')
       setShowToast(true)
       return
     }
 
-    setIsLoading(true)
+    localStorage.setItem('user_session', JSON.stringify({ ...employee, role: 'employee' }))
 
-    try {
-      // Buscar conta de funcionário
-      const allAccounts = localStorage.getItem('employee_accounts')
-      const accounts = allAccounts ? JSON.parse(allAccounts) : []
-      
-      const account = accounts.find((acc: any) => acc.email === loginData.email && acc.password === loginData.password)
-      
-      if (!account) {
-        setToastMessage('Email ou senha incorretos')
-        setToastType('error')
-        setShowToast(true)
-        setIsLoading(false)
-        return
-      }
-
-      // Buscar salão
-      let salon = null
-      
-      // Primeiro, procurar nos donos criados
-      const allOwnerAccounts = localStorage.getItem('owner_accounts')
-      const ownerAccounts = allOwnerAccounts ? JSON.parse(allOwnerAccounts) : []
-      
-      const ownerAccount = ownerAccounts.find((acc: any) => acc.salonCode === account.salonCode)
-      if (ownerAccount) {
-        salon = {
-          id: ownerAccount.salonId,
-          salonCode: ownerAccount.salonCode,
-          name: ownerAccount.nomeSalao,
-        }
-      }
-      
-      // Se não encontrou localmente, tenta buscar do banco de dados
-      if (!salon) {
-        salon = await getSalonByCode(account.salonCode)
-      }
-      
-      if (!salon) {
-        setToastMessage('Salão não encontrado')
-        setToastType('error')
-        setShowToast(true)
-        setIsLoading(false)
-        return
-      }
-
-      const session = {
-        userId: account.userId,
-        email: account.email,
-        fullName: account.fullName,
-        salonId: salon.id,
-        salonCode: account.salonCode,
-        role: 'employee',
-        loginTime: new Date().toISOString(),
-      }
-      
-      localStorage.setItem('user_session', JSON.stringify(session))
-      localStorage.setItem('salon_session', JSON.stringify(salon))
-      
-      setToastMessage('Login realizado com sucesso!')
-      setToastType('success')
-      setShowToast(true)
-      
-      setTimeout(() => {
-        router.push('/dashboard/employee')
-      }, 1000)
-    } catch (error) {
-      console.error('[v0] Erro ao fazer login:', error)
-      setToastMessage('Erro ao fazer login')
-      setToastType('error')
-      setShowToast(true)
-    } finally {
-      setIsLoading(false)
-    }
+    setToastMessage('Login realizado com sucesso!')
+    setToastType('success')
+    setShowToast(true)
+    
+    setTimeout(() => {
+      router.push('/dashboard/employee')
+    }, 1500)
   }
 
   return (
-    <main className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
-      <Toast
-        message={toastMessage}
-        type={toastType}
-        isVisible={showToast}
-        onClose={() => setShowToast(false)}
-      />
+    <div className="min-h-screen bg-background text-foreground p-4 flex items-center justify-center">
+      {showToast && (
+        <Toast message={toastMessage} type={toastType} isVisible={showToast} onClose={() => setShowToast(false)} />
+      )}
 
       <div className="w-full max-w-md">
-        <Button
-          variant="ghost"
-          className="mb-6 -ml-2"
-          onClick={() => router.push('/')}
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Voltar
-        </Button>
-
+        {/* Modo Seleção */}
         {mode === 'choice' && (
-          <Card className="border-blue-500/20">
+          <Card className="bg-card/95 backdrop-blur border-border">
             <CardHeader>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-3 rounded-lg bg-blue-500/20">
-                  <User className="w-6 h-6 text-blue-400" />
-                </div>
-                <div>
-                  <CardTitle>Funcionário</CardTitle>
-                  <p className="text-sm text-muted-foreground">Agenda e faturamento</p>
+              <div className="flex items-center justify-center gap-3 mb-2">
+                <div className="p-3 bg-primary/20 rounded-lg">
+                  <User className="w-8 h-8 text-primary" />
                 </div>
               </div>
+              <CardTitle className="text-center text-2xl">Funcionário</CardTitle>
+              <p className="text-center text-sm text-muted-foreground mt-2">Acesso do funcionário</p>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Button
-                onClick={() => setMode('create')}
-                className="w-full bg-blue-600 hover:bg-blue-700"
-              >
-                Criar Nova Conta
+              <Button onClick={() => setMode('create')} className="w-full" size="lg">
+                Criar Conta
               </Button>
-              <Button
-                onClick={() => setMode('login')}
-                variant="outline"
-                className="w-full"
-              >
-                Logar em Conta Existente
+              <Button onClick={() => setMode('login')} variant="outline" className="w-full" size="lg">
+                Fazer Login
+              </Button>
+              <Button onClick={() => router.push('/')} variant="ghost" className="w-full">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Voltar
               </Button>
             </CardContent>
           </Card>
         )}
 
+        {/* Modo Criar */}
         {mode === 'create' && (
-          <Card className="border-blue-500/20">
+          <Card className="bg-card/95 backdrop-blur border-border">
             <CardHeader>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-3 rounded-lg bg-blue-500/20">
-                  <User className="w-6 h-6 text-blue-400" />
-                </div>
-                <div>
-                  <CardTitle>Criar Conta</CardTitle>
-                  <p className="text-sm text-muted-foreground">Preencha seus dados</p>
-                </div>
-              </div>
+              <CardTitle>Criar Conta</CardTitle>
+              <p className="text-sm text-muted-foreground">Preencha seus dados</p>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleCreate} className="space-y-4">
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Nome Completo</label>
+                  <label className="text-sm font-medium">Nome Completo</label>
                   <Input
-                    type="text"
                     name="fullName"
-                    placeholder="João Silva"
                     value={createData.fullName}
                     onChange={handleCreateChange}
-                    disabled={isLoading}
+                    placeholder="Seu nome"
                   />
                 </div>
-
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Email</label>
+                  <label className="text-sm font-medium">Email</label>
                   <Input
-                    type="email"
                     name="email"
-                    placeholder="joao@email.com"
+                    type="email"
                     value={createData.email}
                     onChange={handleCreateChange}
-                    disabled={isLoading}
+                    placeholder="seu@email.com"
                   />
                 </div>
-
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Código do Salão</label>
+                  <label className="text-sm font-medium">Código do Salão</label>
                   <Input
-                    type="text"
                     name="salonCode"
-                    placeholder="ABC123"
                     value={createData.salonCode}
                     onChange={handleCreateChange}
-                    disabled={isLoading}
+                    placeholder="Código do salão"
                   />
                 </div>
-
-                <Button
-                  type="submit"
-                  className="w-full mt-6 bg-blue-600 hover:bg-blue-700"
-                  disabled={isLoading}
-                >
-                  {isLoading ? 'Criando...' : 'Criar Conta'}
-                </Button>
-
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="w-full"
-                  onClick={() => setMode('choice')}
-                  disabled={isLoading}
-                >
-                  Voltar
+                <Button type="submit" className="w-full">
+                  Criar Conta
                 </Button>
               </form>
+              <Button
+                variant="ghost"
+                className="w-full mt-3"
+                onClick={() => setMode('choice')}
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Voltar
+              </Button>
             </CardContent>
           </Card>
         )}
 
+        {/* Modo Login */}
         {mode === 'login' && (
-          <Card className="border-blue-500/20">
+          <Card className="bg-card/95 backdrop-blur border-border">
             <CardHeader>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-3 rounded-lg bg-blue-500/20">
-                  <User className="w-6 h-6 text-blue-400" />
-                </div>
-                <div>
-                  <CardTitle>Logar</CardTitle>
-                  <p className="text-sm text-muted-foreground">Entre em sua conta</p>
-                </div>
-              </div>
+              <CardTitle>Fazer Login</CardTitle>
+              <p className="text-sm text-muted-foreground">Entre na sua conta</p>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleLogin} className="space-y-4">
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Email</label>
+                  <label className="text-sm font-medium">Email</label>
                   <Input
-                    type="email"
                     name="email"
-                    placeholder="joao@email.com"
+                    type="email"
                     value={loginData.email}
                     onChange={handleLoginChange}
-                    disabled={isLoading}
+                    placeholder="seu@email.com"
                   />
                 </div>
-
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Senha</label>
+                  <label className="text-sm font-medium">Senha</label>
                   <Input
-                    type="password"
                     name="password"
-                    placeholder="••••••••"
+                    type="password"
                     value={loginData.password}
                     onChange={handleLoginChange}
-                    disabled={isLoading}
+                    placeholder="Sua senha"
                   />
                 </div>
-
-                <Button
-                  type="submit"
-                  className="w-full mt-6 bg-blue-600 hover:bg-blue-700"
-                  disabled={isLoading}
-                >
-                  {isLoading ? 'Entrando...' : 'Logar'}
-                </Button>
-
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="w-full"
-                  onClick={() => setMode('choice')}
-                  disabled={isLoading}
-                >
-                  Voltar
+                <Button type="submit" className="w-full">
+                  Fazer Login
                 </Button>
               </form>
+              <Button
+                variant="ghost"
+                className="w-full mt-3"
+                onClick={() => setMode('choice')}
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Voltar
+              </Button>
             </CardContent>
           </Card>
         )}
       </div>
-    </main>
+    </div>
   )
 }

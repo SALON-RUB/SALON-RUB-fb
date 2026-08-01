@@ -19,13 +19,19 @@ export default function CodigoSalaoPage() {
   const [toastMessage, setToastMessage] = useState('')
 
   useEffect(() => {
-    const session = localStorage.getItem('salon_session')
+    const session = localStorage.getItem('user_session')
     if (!session) {
-      router.push('/sign-in')
+      router.push('/')
       return
     }
 
-    setUser(JSON.parse(session))
+    const sessionData = JSON.parse(session)
+    if (sessionData.role !== 'owner') {
+      router.push('/')
+      return
+    }
+
+    setUser(sessionData)
   }, [router])
 
   const handleCopyCode = async () => {

@@ -18,13 +18,18 @@ export default function MeuLoyaltyPage() {
   })
 
   useEffect(() => {
-    const session = localStorage.getItem('salon_session')
+    const session = localStorage.getItem('user_session')
     if (!session) {
-      router.push('/sign-in')
+      router.push('/')
       return
     }
 
     const sessionData = JSON.parse(session)
+    if (sessionData.role !== 'employee' && sessionData.role !== 'owner') {
+      router.push('/')
+      return
+    }
+
     setUser(sessionData)
 
     // Simular dados de loyalty do funcionário
@@ -46,7 +51,7 @@ export default function MeuLoyaltyPage() {
   return (
     <DashboardLayout>
       <div className="fixed inset-0 w-full h-full -z-10 pointer-events-none">
-        <AnimatedBackground variant="employee" />
+        <AnimatedBackground variant="teal" />
       </div>
 
       <div className="p-6 space-y-6 relative z-10">
