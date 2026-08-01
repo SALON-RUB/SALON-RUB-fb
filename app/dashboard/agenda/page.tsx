@@ -24,19 +24,25 @@ export default function AgendaPage() {
   })
 
   useEffect(() => {
-    const session = localStorage.getItem('salon_session')
+    const session = localStorage.getItem('user_session')
     if (!session) {
-      router.push('/sign-in')
+      router.push('/')
       return
     }
 
     const sessionData = JSON.parse(session)
+    if (sessionData.role !== 'owner' && sessionData.role !== 'employee') {
+      router.push('/')
+      return
+    }
+
     setUser(sessionData)
 
-    const users = JSON.parse(localStorage.getItem('salon_users') || '[]')
-    const userData = users.find((u: any) => u.id === sessionData.userId)
-    if (userData?.salon?.appointments) {
-      setAppointments(userData.salon.appointments)
+    const appointments = JSON.parse(localStorage.getItem('appointments') || '[]')
+    if (sessionData.role === 'owner') {
+      setAppointments(appointments.filter((a: any) => a.salonCode === sessionData.salonCode))
+    } else {
+      setAppointments(appointments.filter((a: any) => a.employeeId === sessionData.userId))
     }
   }, [router])
 

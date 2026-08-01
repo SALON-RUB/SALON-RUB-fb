@@ -18,23 +18,27 @@ export default function LoyaltyPage() {
   })
 
   useEffect(() => {
-    const session = localStorage.getItem('salon_session')
+    const session = localStorage.getItem('user_session')
     if (!session) {
-      router.push('/sign-in')
+      router.push('/')
       return
     }
 
     const sessionData = JSON.parse(session)
+    if (sessionData.role !== 'owner') {
+      router.push('/')
+      return
+    }
+
     setUser(sessionData)
 
     // Simular dados de loyalty (em produção viriam do banco de dados)
-    const ownerAccounts = JSON.parse(localStorage.getItem('owner_accounts') || '[]')
-    const owner = ownerAccounts.find((acc: any) => acc.salonId === sessionData.id)
+    const appointments = JSON.parse(localStorage.getItem('appointments') || '[]')
+    const employeeAccounts = JSON.parse(localStorage.getItem('employee_accounts') || '[]')
     
-    if (owner) {
-      const salon_users = JSON.parse(localStorage.getItem('salon_users') || '[]')
-      const employees = salon_users.filter((u: any) => u.role === 'employee' && u.salonId === sessionData.id)
-      const appointments = owner.salon?.appointments || []
+    if (true) {
+      const employees = employeeAccounts.filter((e: any) => e.salonCode === sessionData.salonCode)
+      const salonAppointments = appointments.filter((a: any) => a.salonCode === sessionData.salonCode)
       
       setStats({
         totalPoints: Math.floor(Math.random() * 10000) + 5000,

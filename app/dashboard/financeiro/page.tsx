@@ -26,22 +26,25 @@ export default function FinanceiroPage() {
   })
 
   useEffect(() => {
-    const session = localStorage.getItem('salon_session')
+    const session = localStorage.getItem('user_session')
     if (!session) {
-      router.push('/sign-in')
+      router.push('/')
       return
     }
 
     const sessionData = JSON.parse(session)
+    if (sessionData.role !== 'owner') {
+      router.push('/')
+      return
+    }
+
     setUser(sessionData)
 
-    const users = JSON.parse(localStorage.getItem('salon_users') || '[]')
-    const userData = users.find((u: any) => u.id === sessionData.userId)
-    if (userData?.salon) {
+    if (true) {
       setFinanceiro({
-        entradas: userData.salon.entradas || 0,
-        despesas: userData.salon.despesas || 0,
-        movimentacoes: userData.salon.movimentacoes || [],
+        entradas: 0,
+        despesas: 0,
+        movimentacoes: [],
       })
     }
   }, [router])

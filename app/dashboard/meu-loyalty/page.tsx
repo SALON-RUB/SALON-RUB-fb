@@ -18,13 +18,18 @@ export default function MeuLoyaltyPage() {
   })
 
   useEffect(() => {
-    const session = localStorage.getItem('salon_session')
+    const session = localStorage.getItem('user_session')
     if (!session) {
-      router.push('/sign-in')
+      router.push('/')
       return
     }
 
     const sessionData = JSON.parse(session)
+    if (sessionData.role !== 'employee' && sessionData.role !== 'owner') {
+      router.push('/')
+      return
+    }
+
     setUser(sessionData)
 
     // Simular dados de loyalty do funcionário

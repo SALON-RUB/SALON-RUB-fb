@@ -21,20 +21,23 @@ export default function EquipePage() {
   })
 
   useEffect(() => {
-    const session = localStorage.getItem('salon_session')
+    const session = localStorage.getItem('user_session')
     if (!session) {
-      router.push('/sign-in')
+      router.push('/')
       return
     }
 
     const sessionData = JSON.parse(session)
+    if (sessionData.role !== 'owner') {
+      router.push('/')
+      return
+    }
+
     setUser(sessionData)
 
-    const users = JSON.parse(localStorage.getItem('salon_users') || '[]')
-    const userData = users.find((u: any) => u.id === sessionData.userId)
-    if (userData?.salon?.employees) {
-      setEmployees(userData.salon.employees)
-    }
+    // Carregar funcionários
+    const employees = JSON.parse(localStorage.getItem('employee_accounts') || '[]')
+    setEmployees(employees)
   }, [router])
 
   const handleAddEmployee = () => {
