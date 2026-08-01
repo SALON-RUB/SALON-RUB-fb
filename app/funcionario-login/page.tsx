@@ -137,7 +137,7 @@ export default function EmployeeLoginPage() {
   return (
     <div className="min-h-screen bg-background text-foreground p-4 flex items-center justify-center">
       {showToast && (
-        <Toast message={toastMessage} type={toastType} onClose={() => setShowToast(false)} />
+        <Toast message={toastMessage} type={toastType} isVisible={showToast} onClose={() => setShowToast(false)} />
       )}
 
       <div className="w-full max-w-md">
