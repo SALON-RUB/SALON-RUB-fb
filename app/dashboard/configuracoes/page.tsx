@@ -30,21 +30,21 @@ export default function ConfiguracoesPage() {
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
-    const session = localStorage.getItem('salon_session')
-    if (!session) {
-      router.push('/sign-in')
+    const userSession = localStorage.getItem('user_session')
+    if (!userSession) {
+      router.push('/dono-login')
       return
     }
 
-    const sessionData = JSON.parse(session)
+    const sessionData = JSON.parse(userSession)
     setUser(sessionData)
 
-    // Buscar configuração do localStorage e sincronizar
-    const users = JSON.parse(localStorage.getItem('salon_users') || '[]')
-    const userData = users.find((u: any) => u.id === sessionData.userId)
+    // Buscar configuração do localStorage (owner_accounts)
+    const accounts = JSON.parse(localStorage.getItem('owner_accounts') || '[]')
+    const account = accounts.find((acc: any) => acc.email === sessionData.email)
     
-    if (userData?.salon?.config) {
-      setConfig(userData.salon.config)
+    if (account?.config) {
+      setConfig(account.config)
     }
   }, [router])
 
@@ -73,26 +73,12 @@ export default function ConfiguracoesPage() {
     if (!user) return
     
     try {
-      // Salvar em salon_users
-      const users = JSON.parse(localStorage.getItem('salon_users') || '[]')
-      const userIndex = users.findIndex((u: any) => u.id === user.id)
-      if (userIndex >= 0) {
-        if (!users[userIndex].salon) {
-          users[userIndex].salon = {}
-        }
-        users[userIndex].salon.config = config
-        localStorage.setItem('salon_users', JSON.stringify(users))
-      }
-      
-      // Sincronizar com owner_accounts se for dono
+      // Salvar em owner_accounts
       const ownerAccounts = JSON.parse(localStorage.getItem('owner_accounts') || '[]')
-      const ownerIndex = ownerAccounts.findIndex((acc: any) => acc.salonId === user.salonId)
+      const ownerIndex = ownerAccounts.findIndex((acc: any) => acc.email === user.email)
       
       if (ownerIndex >= 0) {
-        if (!ownerAccounts[ownerIndex].salon) {
-          ownerAccounts[ownerIndex].salon = {}
-        }
-        ownerAccounts[ownerIndex].salon.config = config
+        ownerAccounts[ownerIndex].config = config
         localStorage.setItem('owner_accounts', JSON.stringify(ownerAccounts))
       }
       
