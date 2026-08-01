@@ -87,6 +87,7 @@ export default function EmployeeLoginPage() {
       email: createData.email,
       salonCode: createData.salonCode.toUpperCase(),
       password: tempPassword,
+      role: 'employee',
     }
 
     employees.push(newEmployee)
@@ -123,7 +124,7 @@ export default function EmployeeLoginPage() {
       return
     }
 
-    localStorage.setItem('user_session', JSON.stringify(employee))
+    localStorage.setItem('user_session', JSON.stringify({ ...employee, role: 'employee' }))
 
     setToastMessage('Login realizado com sucesso!')
     setToastType('success')

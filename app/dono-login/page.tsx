@@ -81,6 +81,7 @@ export default function OwnerLoginPage() {
       email: createData.email,
       password: createData.password,
       salonCode: Math.random().toString(36).slice(2, 8).toUpperCase(),
+      role: 'owner',
     }
 
     accounts.push(newAccount)
@@ -117,7 +118,7 @@ export default function OwnerLoginPage() {
       return
     }
 
-    localStorage.setItem('user_session', JSON.stringify(account))
+    localStorage.setItem('user_session', JSON.stringify({ ...account, role: 'owner' }))
 
     setToastMessage('Login realizado com sucesso!')
     setToastType('success')
