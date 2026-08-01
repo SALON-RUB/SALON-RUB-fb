@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Toast } from '@/components/toast'
 import { Scissors, ArrowLeft } from 'lucide-react'
-import { createOwnerAccount, loginOwner } from '@/app/actions/auth'
 
 export default function OwnerLoginPage() {
   const router = useRouter()
@@ -46,7 +45,7 @@ export default function OwnerLoginPage() {
     }))
   }
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const handleCreate = (e: React.FormEvent) => {
     e.preventDefault()
     
     if (!createData.numero || !createData.fullName || !createData.nomeSalao || !createData.email || !createData.password) {
@@ -63,37 +62,41 @@ export default function OwnerLoginPage() {
       return
     }
 
-    setIsLoading(true)
-
-    try {
-      const result = await createOwnerAccount(createData)
-      
-      if (!result.success) {
-        setToastMessage(result.error || 'Erro ao criar conta')
-        setToastType('error')
-        setShowToast(true)
-        setIsLoading(false)
-        return
-      }
-      
-      setToastMessage('Conta criada com sucesso!')
-      setToastType('success')
-      setShowToast(true)
-      
-      setTimeout(() => {
-        router.push('/dashboard')
-      }, 1000)
-    } catch (error) {
-      console.error('[v0] Erro ao criar conta:', error)
-      setToastMessage('Erro ao criar conta')
+    // Salvar conta no localStorage
+    const accounts = JSON.parse(localStorage.getItem('owner_accounts') || '[]')
+    
+    // Verificar se email já existe
+    if (accounts.find((acc: any) => acc.email === createData.email)) {
+      setToastMessage('Email já cadastrado')
       setToastType('error')
       setShowToast(true)
-    } finally {
-      setIsLoading(false)
+      return
     }
+
+    const newAccount = {
+      userId: `owner_${Date.now()}`,
+      numero: createData.numero,
+      fullName: createData.fullName,
+      nomeSalao: createData.nomeSalao,
+      email: createData.email,
+      password: createData.password,
+      salonCode: Math.random().toString(36).slice(2, 8).toUpperCase(),
+    }
+
+    accounts.push(newAccount)
+    localStorage.setItem('owner_accounts', JSON.stringify(accounts))
+    localStorage.setItem('user_session', JSON.stringify(newAccount))
+
+    setToastMessage('Conta criada com sucesso!')
+    setToastType('success')
+    setShowToast(true)
+    
+    setTimeout(() => {
+      router.push('/dashboard')
+    }, 1500)
   }
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = (e: React.FormEvent) => {
     e.preventDefault()
     
     if (!loginData.email || !loginData.password) {
@@ -103,251 +106,188 @@ export default function OwnerLoginPage() {
       return
     }
 
-    if (!loginData.email.includes('@')) {
-      setToastMessage('Email inválido')
+    // Buscar conta no localStorage
+    const accounts = JSON.parse(localStorage.getItem('owner_accounts') || '[]')
+    const account = accounts.find((acc: any) => acc.email === loginData.email && acc.password === loginData.password)
+
+    if (!account) {
+      setToastMessage('Email ou senha incorretos')
       setToastType('error')
       setShowToast(true)
       return
     }
 
-    setIsLoading(true)
+    localStorage.setItem('user_session', JSON.stringify(account))
 
-    try {
-      const result = await loginOwner(loginData.email, loginData.password)
-      
-      if (!result.success) {
-        setToastMessage(result.error || 'Email ou senha incorretos')
-        setToastType('error')
-        setShowToast(true)
-        setIsLoading(false)
-        return
-      }
-
-      setToastMessage('Login realizado com sucesso!')
-      setToastType('success')
-      setShowToast(true)
-      
-      setTimeout(() => {
-        router.push('/dashboard')
-      }, 1000)
-    } catch (error) {
-      console.error('[v0] Erro ao fazer login:', error)
-      setToastMessage('Erro ao fazer login')
-      setToastType('error')
-      setShowToast(true)
-    } finally {
-      setIsLoading(false)
-    }
+    setToastMessage('Login realizado com sucesso!')
+    setToastType('success')
+    setShowToast(true)
+    
+    setTimeout(() => {
+      router.push('/dashboard')
+    }, 1500)
   }
 
   return (
-    <main className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
-      <Toast
-        message={toastMessage}
-        type={toastType}
-        isVisible={showToast}
-        onClose={() => setShowToast(false)}
-      />
+    <div className="min-h-screen bg-background text-foreground p-4 flex items-center justify-center">
+      {showToast && (
+        <Toast message={toastMessage} type={toastType} onClose={() => setShowToast(false)} />
+      )}
 
       <div className="w-full max-w-md">
-        <Button
-          variant="ghost"
-          className="mb-6 -ml-2"
-          onClick={() => router.push('/')}
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Voltar
-        </Button>
-
+        {/* Modo Seleção */}
         {mode === 'choice' && (
-          <Card className="border-primary/20">
+          <Card className="bg-card/95 backdrop-blur border-border">
             <CardHeader>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-3 rounded-lg bg-primary/20">
-                  <Scissors className="w-6 h-6 text-primary" />
-                </div>
-                <div>
-                  <CardTitle>Dono do Salão</CardTitle>
-                  <p className="text-sm text-muted-foreground">Acesso completo</p>
+              <div className="flex items-center justify-center gap-3 mb-2">
+                <div className="p-3 bg-primary/20 rounded-lg">
+                  <Scissors className="w-8 h-8 text-primary" />
                 </div>
               </div>
+              <CardTitle className="text-center text-2xl">Salon Rub</CardTitle>
+              <p className="text-center text-sm text-muted-foreground mt-2">Bem-vindo de volta!</p>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Button
-                onClick={() => setMode('create')}
-                className="w-full bg-primary hover:bg-primary/90"
-              >
-                Criar Nova Conta
+              <Button onClick={() => setMode('create')} className="w-full" size="lg">
+                Criar Conta
               </Button>
-              <Button
-                onClick={() => setMode('login')}
-                variant="outline"
-                className="w-full"
-              >
-                Logar em Conta Existente
+              <Button onClick={() => setMode('login')} variant="outline" className="w-full" size="lg">
+                Fazer Login
+              </Button>
+              <Button onClick={() => router.push('/')} variant="ghost" className="w-full">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Voltar
               </Button>
             </CardContent>
           </Card>
         )}
 
+        {/* Modo Criar */}
         {mode === 'create' && (
-          <Card className="border-primary/20">
+          <Card className="bg-card/95 backdrop-blur border-border">
             <CardHeader>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-3 rounded-lg bg-primary/20">
-                  <Scissors className="w-6 h-6 text-primary" />
-                </div>
-                <div>
-                  <CardTitle>Criar Conta</CardTitle>
-                  <p className="text-sm text-muted-foreground">Preencha seus dados</p>
-                </div>
-              </div>
+              <CardTitle>Criar Conta</CardTitle>
+              <p className="text-sm text-muted-foreground">Preencha seus dados</p>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleCreate} className="space-y-4">
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Número</label>
+                  <label className="text-sm font-medium">Número</label>
                   <Input
-                    type="tel"
                     name="numero"
-                    placeholder="(11) 98765-4321"
                     value={createData.numero}
                     onChange={handleCreateChange}
+                    placeholder="Seu número"
                     disabled={isLoading}
                   />
                 </div>
-
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Nome Completo</label>
+                  <label className="text-sm font-medium">Nome Completo</label>
                   <Input
-                    type="text"
                     name="fullName"
-                    placeholder="João Silva"
                     value={createData.fullName}
                     onChange={handleCreateChange}
+                    placeholder="Seu nome"
                     disabled={isLoading}
                   />
                 </div>
-
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Nome do Salão</label>
+                  <label className="text-sm font-medium">Nome do Salão</label>
                   <Input
-                    type="text"
                     name="nomeSalao"
-                    placeholder="Salon Rub"
                     value={createData.nomeSalao}
                     onChange={handleCreateChange}
+                    placeholder="Nome do seu salão"
                     disabled={isLoading}
                   />
                 </div>
-
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Email</label>
+                  <label className="text-sm font-medium">Email</label>
                   <Input
-                    type="email"
                     name="email"
-                    placeholder="joao@email.com"
+                    type="email"
                     value={createData.email}
                     onChange={handleCreateChange}
+                    placeholder="seu@email.com"
                     disabled={isLoading}
                   />
                 </div>
-
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Senha</label>
+                  <label className="text-sm font-medium">Senha</label>
                   <Input
-                    type="password"
                     name="password"
-                    placeholder="••••••••"
+                    type="password"
                     value={createData.password}
                     onChange={handleCreateChange}
+                    placeholder="Sua senha"
                     disabled={isLoading}
                   />
                 </div>
-
-                <Button
-                  type="submit"
-                  className="w-full mt-6 bg-primary hover:bg-primary/90"
-                  disabled={isLoading}
-                >
-                  {isLoading ? 'Criando...' : 'Criar Conta'}
-                </Button>
-
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="w-full"
-                  onClick={() => setMode('choice')}
-                  disabled={isLoading}
-                >
-                  Voltar
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  Criar Conta
                 </Button>
               </form>
+              <Button
+                variant="ghost"
+                className="w-full mt-3"
+                onClick={() => setMode('choice')}
+                disabled={isLoading}
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Voltar
+              </Button>
             </CardContent>
           </Card>
         )}
 
+        {/* Modo Login */}
         {mode === 'login' && (
-          <Card className="border-primary/20">
+          <Card className="bg-card/95 backdrop-blur border-border">
             <CardHeader>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-3 rounded-lg bg-primary/20">
-                  <Scissors className="w-6 h-6 text-primary" />
-                </div>
-                <div>
-                  <CardTitle>Logar</CardTitle>
-                  <p className="text-sm text-muted-foreground">Entre em sua conta</p>
-                </div>
-              </div>
+              <CardTitle>Fazer Login</CardTitle>
+              <p className="text-sm text-muted-foreground">Entre na sua conta</p>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleLogin} className="space-y-4">
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Email</label>
+                  <label className="text-sm font-medium">Email</label>
                   <Input
-                    type="email"
                     name="email"
-                    placeholder="joao@email.com"
+                    type="email"
                     value={loginData.email}
                     onChange={handleLoginChange}
+                    placeholder="seu@email.com"
                     disabled={isLoading}
                   />
                 </div>
-
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Senha</label>
+                  <label className="text-sm font-medium">Senha</label>
                   <Input
-                    type="password"
                     name="password"
-                    placeholder="••••••••"
+                    type="password"
                     value={loginData.password}
                     onChange={handleLoginChange}
+                    placeholder="Sua senha"
                     disabled={isLoading}
                   />
                 </div>
-
-                <Button
-                  type="submit"
-                  className="w-full mt-6 bg-primary hover:bg-primary/90"
-                  disabled={isLoading}
-                >
-                  {isLoading ? 'Entrando...' : 'Logar'}
-                </Button>
-
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="w-full"
-                  onClick={() => setMode('choice')}
-                  disabled={isLoading}
-                >
-                  Voltar
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  Fazer Login
                 </Button>
               </form>
+              <Button
+                variant="ghost"
+                className="w-full mt-3"
+                onClick={() => setMode('choice')}
+                disabled={isLoading}
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Voltar
+              </Button>
             </CardContent>
           </Card>
         )}
       </div>
-    </main>
+    </div>
   )
 }
