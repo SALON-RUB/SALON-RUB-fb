@@ -41,9 +41,31 @@ export default function ConfiguracoesPagePage() {
     try {
       setLoading(true)
       const data = await getPageSettingsByUserId(id)
-      setSettings(data)
+      if (data) {
+        setSettings(data)
+      } else {
+        // Criar configurações padrão
+        setSettings({
+          salonId: id,
+          pageName: 'Agende seu Horário',
+          primaryColor: '#9333ea',
+          secondaryColor: '#ffffff',
+          backgroundColor: '#000000',
+          textColor: '#ffffff',
+          buttonText: 'Agendar',
+        })
+      }
     } catch (err: any) {
       console.error('[v0] Erro:', err)
+      setSettings({
+        salonId: id,
+        pageName: 'Agende seu Horário',
+        primaryColor: '#9333ea',
+        secondaryColor: '#ffffff',
+        backgroundColor: '#000000',
+        textColor: '#ffffff',
+        buttonText: 'Agendar',
+      })
     } finally {
       setLoading(false)
     }
@@ -79,10 +101,10 @@ export default function ConfiguracoesPagePage() {
     )
   }
 
-  if (!settings) {
+  if (!settings && !loading) {
     return (
       <DashboardLayout>
-        <div className="p-6 text-center">Erro ao carregar</div>
+        <div className="p-6 text-center">Erro ao carregar configurações</div>
       </DashboardLayout>
     )
   }

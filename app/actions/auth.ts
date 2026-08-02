@@ -96,7 +96,7 @@ export async function createOwnerAccount(data: {
     const userId = `owner_${Date.now()}_${Math.random().toString(36).slice(2)}`
     const hashedPassword = hashPassword(data.password)
 
-    await db
+    const newUser = await db
       .insert(user)
       .values({
         id: userId,
@@ -107,11 +107,15 @@ export async function createOwnerAccount(data: {
       } as any)
       .returning()
 
+    if (!newUser || newUser.length === 0) {
+      return { success: false, error: 'Erro ao criar usuário' }
+    }
+
     // Criar salão
     const salonId = crypto.randomUUID()
     const salonCode = Math.random().toString(36).slice(2, 8).toUpperCase()
 
-    await db
+    const newSalon = await db
       .insert(salons)
       .values({
         id: salonId,
@@ -120,6 +124,10 @@ export async function createOwnerAccount(data: {
         salonCode: salonCode,
       } as any)
       .returning()
+
+    if (!newSalon || newSalon.length === 0) {
+      return { success: false, error: 'Erro ao criar salão' }
+    }
 
     return {
       success: true,
