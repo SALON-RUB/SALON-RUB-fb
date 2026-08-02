@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Scissors, Calendar, Clock, User, CheckCircle } from 'lucide-react'
-import { createAppointment, getServicesBySalonCode } from '@/app/actions/appointments'
-import { getPageSettingsByCode } from '@/app/actions/page-settings'
+import { createAppointment } from '@/app/actions/appointments'
+import { getPageSettingsBySalonCode } from '@/app/actions/page-settings'
+import { getSalonByCode, getServicesBySalon } from '@/app/actions/salon'
 
 export default function ClientePage() {
   const [step, setStep] = useState<'codigo' | 'agendamento' | 'confirmacao'>('codigo')
@@ -37,15 +38,24 @@ export default function ClientePage() {
     }
 
     try {
+      // Buscar salão no banco
+      const salonData = await getSalonByCode(salonCode.toUpperCase())
+      if (!salonData) {
+        setError('Código do salão não encontrado')
+        setLoading(false)
+        return
+      }
+
       // Buscar configurações da página do salão
-      const settings = await getPageSettingsByCode(salonCode.toUpperCase())
+      const settings = await getPageSettingsBySalonCode(salonCode.toUpperCase())
       setPageSettings(settings)
 
       // Buscar serviços
-      const salonServices = await getServicesBySalonCode(salonCode.toUpperCase())
+      const salonServices = await getServicesBySalon(salonData.id)
       setServices(salonServices || [])
 
       setSalon({
+        id: salonData.id,
         code: salonCode.toUpperCase(),
         name: settings?.pageName || 'Agende seu Horário',
       })
