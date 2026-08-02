@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Toast } from '@/components/toast'
 import { Scissors, ArrowLeft } from 'lucide-react'
+import { createOwnerAccount, loginOwner } from '@/app/actions/auth'
 
 export default function OwnerLoginPage() {
   const router = useRouter()
@@ -45,10 +46,10 @@ export default function OwnerLoginPage() {
     }))
   }
 
-  const handleCreate = (e: React.FormEvent) => {
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!createData.numero || !createData.fullName || !createData.nomeSalao || !createData.email || !createData.password) {
+    if (!createData.fullName || !createData.nomeSalao || !createData.email || !createData.password) {
       setToastMessage('Preencha todos os campos')
       setToastType('error')
       setShowToast(true)
@@ -62,42 +63,56 @@ export default function OwnerLoginPage() {
       return
     }
 
-    // Salvar conta no localStorage
-    const accounts = JSON.parse(localStorage.getItem('owner_accounts') || '[]')
-    
-    // Verificar se email já existe
-    if (accounts.find((acc: any) => acc.email === createData.email)) {
-      setToastMessage('Email já cadastrado')
+    setIsLoading(true)
+
+    try {
+      const result = await createOwnerAccount({
+        numero: createData.numero || 'N/A',
+        fullName: createData.fullName,
+        nomeSalao: createData.nomeSalao,
+        email: createData.email,
+        password: createData.password,
+      })
+
+      if (!result.success) {
+        setToastMessage(result.error || 'Erro ao criar conta')
+        setToastType('error')
+        setShowToast(true)
+        setIsLoading(false)
+        return
+      }
+
+      // Salvar sessão
+      if (result.user && result.salon) {
+        const userSession = {
+          userId: (result.user as any).id,
+          role: 'owner',
+          fullName: (result.user as any).name,
+          nomeSalao: (result.salon as any).name,
+          email: (result.user as any).email,
+          salonCode: (result.salon as any).salonCode,
+        }
+
+        localStorage.setItem('user_session', JSON.stringify(userSession))
+      }
+
+      setToastMessage('Conta criada com sucesso!')
+      setToastType('success')
+      setShowToast(true)
+
+      setTimeout(() => {
+        router.push('/dashboard')
+      }, 1500)
+    } catch (error: any) {
+      setToastMessage(error.message || 'Erro ao criar conta')
       setToastType('error')
       setShowToast(true)
-      return
+    } finally {
+      setIsLoading(false)
     }
-
-    const newAccount = {
-      userId: `owner_${Date.now()}`,
-      numero: createData.numero,
-      fullName: createData.fullName,
-      nomeSalao: createData.nomeSalao,
-      email: createData.email,
-      password: createData.password,
-      salonCode: Math.random().toString(36).slice(2, 8).toUpperCase(),
-      role: 'owner',
-    }
-
-    accounts.push(newAccount)
-    localStorage.setItem('owner_accounts', JSON.stringify(accounts))
-    localStorage.setItem('user_session', JSON.stringify(newAccount))
-
-    setToastMessage('Conta criada com sucesso!')
-    setToastType('success')
-    setShowToast(true)
-    
-    setTimeout(() => {
-      router.push('/dashboard')
-    }, 1500)
   }
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     
     if (!loginData.email || !loginData.password) {
@@ -107,26 +122,47 @@ export default function OwnerLoginPage() {
       return
     }
 
-    // Buscar conta no localStorage
-    const accounts = JSON.parse(localStorage.getItem('owner_accounts') || '[]')
-    const account = accounts.find((acc: any) => acc.email === loginData.email && acc.password === loginData.password)
+    setIsLoading(true)
 
-    if (!account) {
-      setToastMessage('Email ou senha incorretos')
+    try {
+      const result = await loginOwner(loginData.email, loginData.password)
+
+      if (!result.success) {
+        setToastMessage(result.error || 'Email ou senha incorretos')
+        setToastType('error')
+        setShowToast(true)
+        setIsLoading(false)
+        return
+      }
+
+      // Salvar sessão
+      if (result.user && result.salon) {
+        const userSession = {
+          userId: (result.user as any).id,
+          role: 'owner',
+          fullName: (result.user as any).name,
+          nomeSalao: (result.salon as any).name,
+          email: (result.user as any).email,
+          salonCode: (result.salon as any).salonCode,
+        }
+
+        localStorage.setItem('user_session', JSON.stringify(userSession))
+      }
+
+      setToastMessage('Login realizado com sucesso!')
+      setToastType('success')
+      setShowToast(true)
+
+      setTimeout(() => {
+        router.push('/dashboard')
+      }, 1500)
+    } catch (error: any) {
+      setToastMessage(error.message || 'Erro ao fazer login')
       setToastType('error')
       setShowToast(true)
-      return
+    } finally {
+      setIsLoading(false)
     }
-
-    localStorage.setItem('user_session', JSON.stringify({ ...account, role: 'owner' }))
-
-    setToastMessage('Login realizado com sucesso!')
-    setToastType('success')
-    setShowToast(true)
-    
-    setTimeout(() => {
-      router.push('/dashboard')
-    }, 1500)
   }
 
   return (
