@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,7 +10,12 @@ import { Scissors, ArrowLeft } from 'lucide-react'
 import { createOwnerAccount, loginOwner } from '@/app/actions/auth'
 
 export default function OwnerLoginPage() {
+  const routerRef = useRef<any>(null)
   const router = useRouter()
+  
+  useEffect(() => {
+    routerRef.current = router
+  }, [router])
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
   const [toastType, setToastType] = useState<'success' | 'error'>('success')
@@ -101,7 +106,9 @@ export default function OwnerLoginPage() {
       setShowToast(true)
 
       setTimeout(() => {
-        router.push('/dashboard')
+        if (routerRef.current) {
+          routerRef.current.push('/dashboard')
+        }
       }, 1500)
     } catch (error: any) {
       setToastMessage(error.message || 'Erro ao criar conta')
@@ -154,7 +161,9 @@ export default function OwnerLoginPage() {
       setShowToast(true)
 
       setTimeout(() => {
-        router.push('/dashboard')
+        if (routerRef.current) {
+          routerRef.current.push('/dashboard')
+        }
       }, 1500)
     } catch (error: any) {
       setToastMessage(error.message || 'Erro ao fazer login')
