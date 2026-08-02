@@ -1,18 +1,24 @@
 'use server'
 
-import crypto from 'crypto'
+import { auth } from '@/lib/auth'
+import { db } from '@/lib/db'
+import { salons, appointments, services } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
+import { headers } from 'next/headers'
+import { revalidatePath } from 'next/cache'
 
-function getStorage(key: string): string | null {
-  if (typeof window !== 'undefined') {
-    return localStorage.getItem(key)
-  }
-  return null
+async function getUserId() {
+  const session = await auth.api.getSession({ headers: await headers() })
+  if (!session?.user) throw new Error('Não autorizado')
+  return session.user.id
 }
 
-function setStorage(key: string, value: string): void {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem(key, value)
-  }
+async function getSalonByCode(salonCode: string) {
+  const salon = await db.query.salons.findFirst({
+    where: eq(salons.salonCode, salonCode.toUpperCase()),
+  })
+  if (!salon) throw new Error('Código do salão não encontrado')
+  return salon
 }
 
 export async function createAppointment(appointmentData: {
@@ -25,30 +31,30 @@ export async function createAppointment(appointmentData: {
   notes?: string
 }) {
   try {
-    const appointments = JSON.parse(getStorage('appointments') || '[]')
-    const services = JSON.parse(getStorage('services') || '[]')
+    const salon = await getSalonByCode(appointmentData.salonCode)
+    
+    const service = await db.query.services.findFirst({
+      where: eq(services.id, appointmentData.serviceId as any),
+    })
 
-    const service = services.find((s: any) => s.id === appointmentData.serviceId)
+    const newAppointment = await db
+      .insert(appointments)
+      .values({
+        salonId: salon.id,
+        serviceId: appointmentData.serviceId as any,
+        clientName: appointmentData.clientName,
+        clientPhone: appointmentData.clientPhone,
+        appointmentDate: appointmentData.appointmentDate as any,
+        appointmentTime: appointmentData.appointmentTime,
+        duration: service?.duration || 30,
+        price: service?.price,
+        notes: appointmentData.notes || '',
+        status: 'agendado',
+      })
+      .returning()
 
-    const newAppointment = {
-      id: crypto.randomUUID(),
-      salonCode: appointmentData.salonCode,
-      clientName: appointmentData.clientName,
-      clientPhone: appointmentData.clientPhone,
-      serviceId: appointmentData.serviceId,
-      appointmentDate: appointmentData.appointmentDate,
-      appointmentTime: appointmentData.appointmentTime,
-      duration: service?.duration || 30,
-      price: service?.price || '0',
-      notes: appointmentData.notes || '',
-      status: 'agendado',
-      createdAt: new Date().toISOString(),
-    }
-
-    appointments.push(newAppointment)
-    setStorage('appointments', JSON.stringify(appointments))
-
-    return newAppointment
+    revalidatePath('/cliente')
+    return newAppointment[0]
   } catch (error) {
     console.error('[v0] Erro ao criar agendamento:', error)
     throw error
@@ -57,22 +63,19 @@ export async function createAppointment(appointmentData: {
 
 export async function getAppointmentsBySalon() {
   try {
-    const userSession = getStorage('user_session')
-    if (!userSession) return []
+    const userId = await getUserId()
+    
+    const salon = await db.query.salons.findFirst({
+      where: eq(salons.ownerId, userId),
+    })
+    if (!salon) throw new Error('Salão não encontrado')
 
-    const userData = JSON.parse(userSession)
-    const appointments = JSON.parse(getStorage('appointments') || '[]')
-
-    // Se for owner, retornar todos do salão
-    if (userData.role === 'owner') {
-      return appointments.filter((apt: any) => apt.salonCode === userData.salonCode)
-    }
-
-    // Se for employee, retornar apenas os seus
-    return appointments.filter((apt: any) => apt.employeeId === userData.userId)
+    return db.query.appointments.findMany({
+      where: eq(appointments.salonId, salon.id),
+    })
   } catch (error) {
     console.error('[v0] Erro ao buscar agendamentos:', error)
-    return []
+    throw error
   }
 }
 
@@ -81,20 +84,27 @@ export async function updateAppointmentStatus(
   status: string
 ) {
   try {
-    const appointments = JSON.parse(getStorage('appointments') || '[]')
-    const index = appointments.findIndex((apt: any) => apt.id === appointmentId)
+    const userId = await getUserId()
+    
+    const salon = await db.query.salons.findFirst({
+      where: eq(salons.ownerId, userId),
+    })
+    if (!salon) throw new Error('Salão não encontrado')
 
-    if (index >= 0) {
-      appointments[index] = {
-        ...appointments[index],
+    const updated = await db
+      .update(appointments)
+      .set({
         status,
-        updatedAt: new Date().toISOString(),
-      }
-      setStorage('appointments', JSON.stringify(appointments))
-      return appointments[index]
-    }
+        updatedAt: new Date(),
+      })
+      .where(
+        eq(appointments.salonId, salon.id) &&
+        eq(appointments.id, appointmentId as any)
+      )
+      .returning()
 
-    throw new Error('Agendamento não encontrado')
+    revalidatePath('/dashboard/agendamentos')
+    return updated[0]
   } catch (error) {
     console.error('[v0] Erro ao atualizar agendamento:', error)
     throw error
@@ -107,4 +117,17 @@ export async function cancelAppointment(appointmentId: string) {
 
 export async function completeAppointment(appointmentId: string) {
   return updateAppointmentStatus(appointmentId, 'concluido')
+}
+
+export async function getServicesBySalonCode(salonCode: string) {
+  try {
+    const salon = await getSalonByCode(salonCode)
+
+    return db.query.services.findMany({
+      where: eq(services.salonId, salon.id),
+    })
+  } catch (error) {
+    console.error('[v0] Erro ao buscar serviços:', error)
+    return []
+  }
 }

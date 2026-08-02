@@ -51,6 +51,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     { label: 'Financeiro', href: '/dashboard/financeiro', icon: DollarSign },
     { label: 'Código do Salão', href: '/dashboard/codigo', icon: Key },
     { label: 'Configurações', href: '/dashboard/configuracoes', icon: Settings },
+    { label: 'Configurações da Página', href: '/dashboard/configuracoes-pagina', icon: Settings },
   ]
 
   if (!user) {

@@ -143,3 +143,21 @@ export const businessHours = pgTable('business_hours', {
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 })
+
+export const salonPageSettings = pgTable('salon_page_settings', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  salonId: uuid('salon_id').notNull().references(() => salons.id, { onDelete: 'cascade' }),
+  pageName: varchar('page_name', { length: 255 }).default('Agende seu Horário'),
+  logoUrl: text('logo_url'),
+  primaryColor: varchar('primary_color', { length: 7 }).default('#9333ea'),
+  secondaryColor: varchar('secondary_color', { length: 7 }).default('#ffffff'),
+  backgroundColor: varchar('background_color', { length: 7 }).default('#000000'),
+  textColor: varchar('text_color', { length: 7 }).default('#ffffff'),
+  showLoyalty: boolean('show_loyalty').default(true),
+  loyaltyPointsPerPurchase: decimal('loyalty_points_per_purchase', { precision: 10, scale: 2 }).default('1'),
+  loyaltyMessage: text('loyalty_message'),
+  welcomeMessage: text('welcome_message'),
+  buttonText: varchar('button_text', { length: 100 }).default('Agendar'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+})
