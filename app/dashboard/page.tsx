@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { DashboardLayout } from '@/components/dashboard-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Calendar, DollarSign, Users, Scissors } from 'lucide-react'
-import { createSalonIfNotExists, getSalonByCode } from '@/app/actions/salon'
 import { AnimatedBackground } from '@/components/animated-background'
 
 export default function DashboardPage() {
@@ -30,46 +29,22 @@ export default function DashboardPage() {
       
       setUser(userData)
       
-      // Criar ou buscar salão
-      const initSalon = async () => {
-        try {
-          const salonData = await createSalonIfNotExists(userData.userId, userData.fullName)
-          if (salonData) {
-            setSalon(salonData)
-            // Atualizar sessão com salonId
-            const updatedSession = { ...userData, salonId: salonData.id }
-            localStorage.setItem('user_session', JSON.stringify(updatedSession))
-            // Também salvar como salon_session para compatibilidade
-            localStorage.setItem('salon_session', JSON.stringify(salonData))
-          }
-        } catch (error) {
-          console.error('[v0] Erro ao criar salão:', error)
-        } finally {
-          setLoading(false)
-        }
+      // Usar dados do salon da sessão se disponível
+      if (userData.salonCode) {
+        setSalon({
+          id: userData.userId,
+          name: userData.nomeSalao || 'Meu Salão',
+          salonCode: userData.salonCode,
+        })
+        setLoading(false)
+      } else {
+        setLoading(false)
       }
-      
-      initSalon()
-    } catch {
-      router.push('/')
+    } catch (error) {
+      console.error('[v0] Erro ao carregar dashboard:', error)
+      setLoading(false)
     }
   }, [router])
-
-  if (loading) {
-    return (
-      <DashboardLayout>
-        <div className="p-6">Carregando...</div>
-      </DashboardLayout>
-    )
-  }
-
-  if (!user || !salon) {
-    return (
-      <DashboardLayout>
-        <div className="p-6">Erro ao carregar dados</div>
-      </DashboardLayout>
-    )
-  }
 
   return (
     <DashboardLayout>
@@ -78,10 +53,12 @@ export default function DashboardPage() {
       </div>
       <div className="relative z-10 p-6 space-y-6">
         {/* Header */}
+        {user && (
         <div>
           <h1 className="text-3xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground">Bem-vindo, {user.fullName}!</p>
+          <p className="text-muted-foreground">Bem-vindo, {user?.fullName || 'Usuário'}!</p>
         </div>
+        )}
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -135,16 +112,18 @@ export default function DashboardPage() {
         </div>
 
         {/* Info */}
+        {salon && (
         <Card className="bg-blue-500/10 border-blue-500/30">
           <CardHeader>
             <CardTitle className="text-blue-300">Seu Salão</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <p>Nome: <span className="font-medium">{salon.name}</span></p>
-            <p>Código: <span className="font-medium">{salon.salonCode}</span></p>
+            <p>Nome: <span className="font-medium">{salon?.name}</span></p>
+            <p>Código: <span className="font-medium">{salon?.salonCode}</span></p>
             <p>Compartilhe este código com seus funcionários para que eles façam login.</p>
           </CardContent>
         </Card>
+        )}
       </div>
     </DashboardLayout>
   )

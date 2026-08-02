@@ -28,32 +28,21 @@ export default function ServicosPage() {
   useEffect(() => {
     const carregarDados = async () => {
       try {
-        // Primeiro tenta user_session
         const userSession = localStorage.getItem('user_session')
         if (userSession) {
           const userData = JSON.parse(userSession)
           
-          if (userData.salonId) {
-            setSalonId(userData.salonId)
-            const data = await getServicesBySalon(userData.salonId)
+          if (userData.role === 'owner') {
+            // Usar o userId como salonId temporariamente
+            const tempSalonId = userData.userId
+            setSalonId(tempSalonId)
+            const data = await getServicesBySalon(tempSalonId)
             setServices(data)
             return
           }
         }
         
-        // Se não tem salonId em user_session, tenta salon_session
-        const salonSession = localStorage.getItem('salon_session')
-        if (salonSession) {
-          const salon = JSON.parse(salonSession)
-          
-          const salonIdToUse = salon.salonId || salon.id
-          if (salonIdToUse) {
-            setSalonId(salonIdToUse)
-            const data = await getServicesBySalon(salonIdToUse)
-            setServices(data)
-            return
-          }
-        }
+        setServices([])
       } catch (error) {
         console.error('Erro ao carregar dados de serviços:', error)
       }
