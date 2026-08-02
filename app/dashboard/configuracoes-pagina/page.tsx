@@ -6,23 +6,15 @@ import { DashboardLayout } from '@/components/dashboard-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Switch } from '@/components/ui/switch'
-import { getPageSettingsBySalonCode, updatePageSettingsBySalonCode, updatePageSettingsWithAI } from '@/app/actions/page-settings'
-import { Palette, Upload, Type, Sparkles, AlertCircle } from 'lucide-react'
+import { Palette, Type } from 'lucide-react'
+import { getPageSettingsByUserId, updatePageSettings } from '@/app/actions/page-settings'
 
 export default function ConfiguracoesPagePage() {
   const router = useRouter()
+  const [userId, setUserId] = useState<string>('')
   const [settings, setSettings] = useState<any>(null)
-  const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [aiLoading, setAiLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
-  const [aiRequest, setAiRequest] = useState('')
-  const [preview, setPreview] = useState(false)
 
   useEffect(() => {
     const userSession = localStorage.getItem('user_session')
@@ -37,23 +29,20 @@ export default function ConfiguracoesPagePage() {
         router.push('/')
         return
       }
-      setUser(userData)
-      loadSettings(userData.salonCode)
+      setUserId(userData.userId)
+      loadSettings(userData.userId)
     } catch (err) {
-      console.error('[v0] Erro ao carregar sessão:', err)
-      setError('Erro ao carregar sessão')
+      console.error('[v0] Erro:', err)
       setLoading(false)
     }
   }, [router])
 
-  async function loadSettings(salonCode: string) {
+  async function loadSettings(id: string) {
     try {
       setLoading(true)
-      setError('')
-      const data = await getPageSettingsBySalonCode(salonCode)
+      const data = await getPageSettingsByUserId(id)
       setSettings(data)
     } catch (err: any) {
-      setError(err?.message || 'Erro ao carregar configurações')
       console.error('[v0] Erro:', err)
     } finally {
       setLoading(false)
@@ -61,45 +50,17 @@ export default function ConfiguracoesPagePage() {
   }
 
   async function handleSave() {
-    if (!user) return
+    if (!userId || !settings) return
 
     try {
       setSaving(true)
-      setError('')
-      setSuccess('')
-      
-      await updatePageSettingsBySalonCode(user.salonCode, settings)
-      setSuccess('Configurações salvas com sucesso!')
-      setTimeout(() => setSuccess(''), 3000)
+      await updatePageSettings(userId, settings)
+      alert('Configurações salvas com sucesso!')
     } catch (err: any) {
-      setError(err?.message || 'Erro ao salvar configurações')
       console.error('[v0] Erro:', err)
+      alert('Erro ao salvar')
     } finally {
       setSaving(false)
-    }
-  }
-
-  async function handleAIRequest() {
-    if (!user || !aiRequest.trim()) return
-
-    try {
-      setAiLoading(true)
-      setError('')
-      setSuccess('')
-
-      const response = await updatePageSettingsWithAI(user.salonCode, aiRequest)
-      
-      if (response.success && response.settings) {
-        setSettings(response.settings)
-        setSuccess(response.message)
-        setAiRequest('')
-        setTimeout(() => setSuccess(''), 3000)
-      }
-    } catch (err: any) {
-      setError(err?.message || 'Erro ao processar solicitação IA')
-      console.error('[v0] Erro:', err)
-    } finally {
-      setAiLoading(false)
     }
   }
 
@@ -113,336 +74,215 @@ export default function ConfiguracoesPagePage() {
   if (loading) {
     return (
       <DashboardLayout>
-        <div className="p-6 text-center">Carregando configurações...</div>
+        <div className="p-6 text-center">Carregando...</div>
       </DashboardLayout>
     )
   }
 
-  if (!user || !settings) {
+  if (!settings) {
     return (
       <DashboardLayout>
-        <div className="p-6 text-center text-red-500">Erro ao carregar configurações</div>
+        <div className="p-6 text-center">Erro ao carregar</div>
       </DashboardLayout>
     )
   }
 
   return (
     <DashboardLayout>
-      <div className="p-6 space-y-6 max-w-4xl">
-        {/* Header */}
+      <div className="space-y-6 p-6">
         <div>
           <h1 className="text-3xl font-bold">Configurações da Página</h1>
-          <p className="text-muted-foreground">
-            Personalize a página de agendamento dos seus clientes
+          <p className="text-muted-foreground mt-2">
+            Customize a página de agendamento do seu salão
           </p>
         </div>
 
-        {/* Alerts */}
-        {error && (
-          <Card className="border-red-500/50 bg-red-500/10">
-            <CardContent className="pt-6 flex gap-3">
-              <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
-              <p className="text-red-700">{error}</p>
-            </CardContent>
-          </Card>
-        )}
-
-        {success && (
-          <Card className="border-green-500/50 bg-green-500/10">
-            <CardContent className="pt-6 flex gap-3">
-              <AlertCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
-              <p className="text-green-700">{success}</p>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Preview Toggle */}
-        <div className="flex gap-2">
-          <Button
-            variant={!preview ? 'default' : 'outline'}
-            onClick={() => setPreview(false)}
-          >
-            Editar
-          </Button>
-          <Button
-            variant={preview ? 'default' : 'outline'}
-            onClick={() => setPreview(true)}
-          >
-            Pré-visualizar
-          </Button>
-        </div>
-
-        {!preview ? (
-          <>
-            {/* IA Assistant */}
-            <Card className="bg-purple-500/5 border-purple-500/20">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5" />
-                  Assistente de Design (IA)
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <p className="text-sm text-muted-foreground">
-                  Descreva o que você quer mudar e a IA vai fazer as alterações automaticamente.
-                </p>
-                <Textarea
-                  placeholder="Ex: Mude as cores para tons de rosa e branco, deixe mais elegante e coloque um texto de boas-vindas"
-                  value={aiRequest}
-                  onChange={(e) => setAiRequest(e.target.value)}
-                  className="min-h-24"
-                />
-                <Button
-                  onClick={handleAIRequest}
-                  disabled={aiLoading || !aiRequest.trim()}
-                  className="w-full gap-2"
-                >
-                  <Sparkles className="h-4 w-4" />
-                  {aiLoading ? 'Processando...' : 'Aplicar Alterações com IA'}
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Informações Básicas */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Type className="h-5 w-5" />
-                  Informações Básicas
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label>Nome da Página</Label>
-                  <Input
-                    value={settings.pageName || ''}
-                    onChange={(e) => handleChange('pageName', e.target.value)}
-                    placeholder="Agende seu Horário"
-                  />
-                </div>
-
-                <div>
-                  <Label>Mensagem de Boas-vindas</Label>
-                  <Textarea
-                    value={settings.welcomeMessage || ''}
-                    onChange={(e) => handleChange('welcomeMessage', e.target.value)}
-                    placeholder="Bem-vindo ao nosso salão!"
-                    className="min-h-20"
-                  />
-                </div>
-
-                <div>
-                  <Label>Texto do Botão de Agendamento</Label>
-                  <Input
-                    value={settings.buttonText || ''}
-                    onChange={(e) => handleChange('buttonText', e.target.value)}
-                    placeholder="Agendar"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Logo e Imagens */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Upload className="h-5 w-5" />
-                  Logo e Imagens
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label>URL da Logo</Label>
-                  <Input
-                    value={settings.logoUrl || ''}
-                    onChange={(e) => handleChange('logoUrl', e.target.value)}
-                    placeholder="https://exemplo.com/logo.png"
-                  />
-                  {settings.logoUrl && (
-                    <div className="mt-3 p-3 bg-gray-100 rounded">
-                      <img src={settings.logoUrl} alt="Logo" className="h-16 object-contain" />
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Cores */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Palette className="h-5 w-5" />
-                  Paleta de Cores
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Cor Primária (Botões/Títulos)</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        type="color"
-                        value={settings.primaryColor || '#9333ea'}
-                        onChange={(e) => handleChange('primaryColor', e.target.value)}
-                        className="w-12 h-10 cursor-pointer"
-                      />
-                      <Input
-                        value={settings.primaryColor || '#9333ea'}
-                        onChange={(e) => handleChange('primaryColor', e.target.value)}
-                        placeholder="#9333ea"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label>Cor Secundária</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        type="color"
-                        value={settings.secondaryColor || '#ffffff'}
-                        onChange={(e) => handleChange('secondaryColor', e.target.value)}
-                        className="w-12 h-10 cursor-pointer"
-                      />
-                      <Input
-                        value={settings.secondaryColor || '#ffffff'}
-                        onChange={(e) => handleChange('secondaryColor', e.target.value)}
-                        placeholder="#ffffff"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label>Cor de Fundo</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        type="color"
-                        value={settings.backgroundColor || '#000000'}
-                        onChange={(e) => handleChange('backgroundColor', e.target.value)}
-                        className="w-12 h-10 cursor-pointer"
-                      />
-                      <Input
-                        value={settings.backgroundColor || '#000000'}
-                        onChange={(e) => handleChange('backgroundColor', e.target.value)}
-                        placeholder="#000000"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label>Cor do Texto</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        type="color"
-                        value={settings.textColor || '#ffffff'}
-                        onChange={(e) => handleChange('textColor', e.target.value)}
-                        className="w-12 h-10 cursor-pointer"
-                      />
-                      <Input
-                        value={settings.textColor || '#ffffff'}
-                        onChange={(e) => handleChange('textColor', e.target.value)}
-                        placeholder="#ffffff"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Fidelização */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Programa de Fidelização</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label>Ativar Programa de Fidelização</Label>
-                  <Switch
-                    checked={settings.showLoyalty || false}
-                    onCheckedChange={(checked) => handleChange('showLoyalty', checked)}
-                  />
-                </div>
-
-                {settings.showLoyalty && (
-                  <>
-                    <div>
-                      <Label>Pontos por Compra</Label>
-                      <Input
-                        type="number"
-                        value={settings.loyaltyPointsPerPurchase || '1'}
-                        onChange={(e) => handleChange('loyaltyPointsPerPurchase', e.target.value)}
-                        placeholder="1"
-                      />
-                    </div>
-
-                    <div>
-                      <Label>Mensagem de Fidelização</Label>
-                      <Textarea
-                        value={settings.loyaltyMessage || ''}
-                        onChange={(e) => handleChange('loyaltyMessage', e.target.value)}
-                        placeholder="Ganhe pontos a cada compra!"
-                        className="min-h-20"
-                      />
-                    </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Botões de Ação */}
-            <div className="flex gap-2">
-              <Button onClick={handleSave} disabled={saving} size="lg" className="flex-1">
-                {saving ? 'Salvando...' : 'Salvar Configurações'}
-              </Button>
-            </div>
-          </>
-        ) : (
-          /* Preview */
+        <div className="grid gap-6">
+          {/* Informações Básicas */}
           <Card>
-            <CardContent className="pt-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Type className="w-5 h-5" />
+                Informações Básicas
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="text-sm font-medium">Nome da Página</label>
+                <Input
+                  value={settings.pageName || ''}
+                  onChange={(e) => handleChange('pageName', e.target.value)}
+                  placeholder="Ex: Agende seu Horário"
+                  className="mt-1"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium">URL da Logo</label>
+                <Input
+                  value={settings.logoUrl || ''}
+                  onChange={(e) => handleChange('logoUrl', e.target.value)}
+                  placeholder="https://..."
+                  className="mt-1"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium">Mensagem de Boas-vindas</label>
+                <Input
+                  value={settings.welcomeMessage || ''}
+                  onChange={(e) => handleChange('welcomeMessage', e.target.value)}
+                  placeholder="Ex: Bem-vindo ao nosso salão!"
+                  className="mt-1"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium">Texto do Botão</label>
+                <Input
+                  value={settings.buttonText || ''}
+                  onChange={(e) => handleChange('buttonText', e.target.value)}
+                  placeholder="Ex: Agendar"
+                  className="mt-1"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Cores */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Palette className="w-5 h-5" />
+                Cores
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">Cor Primária</label>
+                <div className="flex gap-2 mt-1">
+                  <input
+                    type="color"
+                    value={settings.primaryColor || '#9333ea'}
+                    onChange={(e) => handleChange('primaryColor', e.target.value)}
+                    className="w-12 h-10 rounded cursor-pointer"
+                  />
+                  <Input
+                    value={settings.primaryColor || '#9333ea'}
+                    onChange={(e) => handleChange('primaryColor', e.target.value)}
+                    className="flex-1"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium">Cor Secundária</label>
+                <div className="flex gap-2 mt-1">
+                  <input
+                    type="color"
+                    value={settings.secondaryColor || '#ffffff'}
+                    onChange={(e) => handleChange('secondaryColor', e.target.value)}
+                    className="w-12 h-10 rounded cursor-pointer"
+                  />
+                  <Input
+                    value={settings.secondaryColor || '#ffffff'}
+                    onChange={(e) => handleChange('secondaryColor', e.target.value)}
+                    className="flex-1"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium">Cor de Fundo</label>
+                <div className="flex gap-2 mt-1">
+                  <input
+                    type="color"
+                    value={settings.backgroundColor || '#000000'}
+                    onChange={(e) => handleChange('backgroundColor', e.target.value)}
+                    className="w-12 h-10 rounded cursor-pointer"
+                  />
+                  <Input
+                    value={settings.backgroundColor || '#000000'}
+                    onChange={(e) => handleChange('backgroundColor', e.target.value)}
+                    className="flex-1"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium">Cor do Texto</label>
+                <div className="flex gap-2 mt-1">
+                  <input
+                    type="color"
+                    value={settings.textColor || '#ffffff'}
+                    onChange={(e) => handleChange('textColor', e.target.value)}
+                    className="w-12 h-10 rounded cursor-pointer"
+                  />
+                  <Input
+                    value={settings.textColor || '#ffffff'}
+                    onChange={(e) => handleChange('textColor', e.target.value)}
+                    className="flex-1"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Pré-visualização */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Pré-visualização</CardTitle>
+            </CardHeader>
+            <CardContent>
               <div
-                className="p-6 rounded-lg space-y-4"
+                className="rounded-lg p-6 text-center"
                 style={{
-                  backgroundColor: settings.backgroundColor,
-                  color: settings.textColor,
+                  backgroundColor: settings.backgroundColor || '#000000',
                 }}
               >
                 {settings.logoUrl && (
-                  <div className="flex justify-center mb-4">
-                    <img src={settings.logoUrl} alt="Logo" className="h-20 object-contain" />
+                  <div className="mb-4 flex justify-center">
+                    <img
+                      src={settings.logoUrl}
+                      alt="Logo"
+                      className="h-16 w-auto"
+                    />
                   </div>
                 )}
-
-                <h1 className="text-3xl font-bold text-center">{settings.pageName}</h1>
-
-                {settings.welcomeMessage && (
-                  <p className="text-center text-lg">{settings.welcomeMessage}</p>
-                )}
-
+                <h2
+                  className="text-2xl font-bold mb-4"
+                  style={{ color: settings.primaryColor || '#9333ea' }}
+                >
+                  {settings.pageName || 'Agende seu Horário'}
+                </h2>
+                <p
+                  className="mb-6"
+                  style={{ color: settings.textColor || '#ffffff' }}
+                >
+                  {settings.welcomeMessage || 'Bem-vindo!'}
+                </p>
                 <button
-                  className="w-full py-3 rounded font-bold text-lg"
+                  className="px-6 py-2 rounded font-medium text-white"
                   style={{
-                    backgroundColor: settings.primaryColor,
-                    color: settings.textColor,
+                    backgroundColor: settings.primaryColor || '#9333ea',
                   }}
                 >
                   {settings.buttonText || 'Agendar'}
                 </button>
-
-                {settings.showLoyalty && settings.loyaltyMessage && (
-                  <div
-                    className="p-4 rounded text-center"
-                    style={{
-                      backgroundColor: settings.secondaryColor,
-                      color: settings.primaryColor,
-                    }}
-                  >
-                    {settings.loyaltyMessage}
-                  </div>
-                )}
               </div>
             </CardContent>
           </Card>
-        )}
+
+          {/* Botão Salvar */}
+          <Button
+            onClick={handleSave}
+            disabled={saving}
+            className="w-full h-11 text-base"
+            size="lg"
+          >
+            {saving ? 'Salvando...' : 'Salvar Configurações'}
+          </Button>
+        </div>
       </div>
     </DashboardLayout>
   )

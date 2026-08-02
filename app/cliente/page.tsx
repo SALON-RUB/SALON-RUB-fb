@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Scissors, Calendar, Clock, User, CheckCircle } from 'lucide-react'
 import { createAppointment } from '@/app/actions/appointments'
-import { getPageSettingsBySalonCode } from '@/app/actions/page-settings'
 import { getSalonByCode, getServicesBySalon } from '@/app/actions/salon'
 
 export default function ClientePage() {
@@ -46,10 +45,6 @@ export default function ClientePage() {
         return
       }
 
-      // Buscar configurações da página do salão
-      const settings = await getPageSettingsBySalonCode(salonCode.toUpperCase())
-      setPageSettings(settings)
-
       // Buscar serviços
       const salonServices = await getServicesBySalon(salonData.id)
       setServices(salonServices || [])
@@ -57,7 +52,7 @@ export default function ClientePage() {
       setSalon({
         id: salonData.id,
         code: salonCode.toUpperCase(),
-        name: settings?.pageName || 'Agende seu Horário',
+        name: salonData.name || 'Agende seu Horário',
       })
       
       setStep('agendamento')
