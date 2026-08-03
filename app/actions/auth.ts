@@ -108,7 +108,7 @@ export async function createOwnerAccount(data: {
         name: data.fullName,
         password: hashedPassword,
         emailVerified: false,
-      } as any)
+      })
       .returning()
 
     console.log('[v0] Usuário criado:', newUser)
@@ -126,11 +126,11 @@ export async function createOwnerAccount(data: {
     const newSalon = await db
       .insert(salons)
       .values({
-        id: salonId,
+        id: salonId as any,
         name: data.nomeSalao,
         ownerId: userId,
         salonCode: salonCode,
-      } as any)
+      })
       .returning()
 
     console.log('[v0] Salão criado:', newSalon)
@@ -239,7 +239,7 @@ export async function createEmployeeAccount(data: {
         name: data.fullName,
         password: hashedPassword,
         emailVerified: false,
-      } as any)
+      })
       .returning()
 
     // Criar funcionário
@@ -249,11 +249,11 @@ export async function createEmployeeAccount(data: {
       .values({
         id: employeeId,
         userId: userId,
-        salonId: salon.id,
+        salonId: salon.id as any,
         name: data.fullName,
         email: data.email,
         role: 'employee',
-      } as any)
+      })
       .returning()
 
     return {
