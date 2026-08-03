@@ -104,10 +104,11 @@ export async function createOwnerAccount(data: {
       .insert(user)
       .values({
         id: userId,
-        email: data.email,
         name: data.fullName,
-        password: hashedPassword,
+        email: data.email,
         emailVerified: false,
+        image: null,
+        password: hashedPassword,
       })
       .returning()
 
@@ -235,10 +236,11 @@ export async function createEmployeeAccount(data: {
       .insert(user)
       .values({
         id: userId,
-        email: data.email,
         name: data.fullName,
-        password: hashedPassword,
+        email: data.email,
         emailVerified: false,
+        image: null,
+        password: hashedPassword,
       })
       .returning()
 
