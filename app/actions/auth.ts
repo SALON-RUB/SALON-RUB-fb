@@ -85,10 +85,13 @@ export async function createOwnerAccount(data: {
   password: string
 }) {
   try {
+    console.log('[v0] Iniciando createOwnerAccount com email:', data.email)
+    
     // Verificar se o email já existe
     const existingUsers = await db.select().from(user).where(eq(user.email, data.email))
 
     if (existingUsers.length > 0) {
+      console.log('[v0] Email já existe')
       return { success: false, error: 'Email já cadastrado' }
     }
 
@@ -96,6 +99,7 @@ export async function createOwnerAccount(data: {
     const userId = `owner_${Date.now()}_${Math.random().toString(36).slice(2)}`
     const hashedPassword = hashPassword(data.password)
 
+    console.log('[v0] Tentando inserir usuário com ID:', userId)
     const newUser = await db
       .insert(user)
       .values({
@@ -107,7 +111,10 @@ export async function createOwnerAccount(data: {
       } as any)
       .returning()
 
+    console.log('[v0] Usuário criado:', newUser)
+
     if (!newUser || newUser.length === 0) {
+      console.log('[v0] Erro: newUser está vazio')
       return { success: false, error: 'Erro ao criar usuário' }
     }
 
@@ -115,6 +122,7 @@ export async function createOwnerAccount(data: {
     const salonId = crypto.randomUUID()
     const salonCode = Math.random().toString(36).slice(2, 8).toUpperCase()
 
+    console.log('[v0] Tentando criar salão com ID:', salonId, 'Code:', salonCode)
     const newSalon = await db
       .insert(salons)
       .values({
@@ -125,10 +133,14 @@ export async function createOwnerAccount(data: {
       } as any)
       .returning()
 
+    console.log('[v0] Salão criado:', newSalon)
+
     if (!newSalon || newSalon.length === 0) {
+      console.log('[v0] Erro: newSalon está vazio')
       return { success: false, error: 'Erro ao criar salão' }
     }
 
+    console.log('[v0] Conta criada com sucesso!')
     return {
       success: true,
       user: {
@@ -144,7 +156,9 @@ export async function createOwnerAccount(data: {
     }
   } catch (error) {
     console.error('[v0] Erro ao criar conta:', error)
-    return { success: false, error: 'Erro ao criar conta' }
+    console.error('[v0] Erro message:', (error as any)?.message)
+    console.error('[v0] Erro stack:', (error as any)?.stack)
+    return { success: false, error: (error as any)?.message || 'Erro ao criar conta' }
   }
 }
 
