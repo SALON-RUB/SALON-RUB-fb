@@ -14,6 +14,7 @@ export default function ConfiguracoesPage() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [showToast, setShowToast] = useState(false)
+  const [settingsLoaded, setSettingsLoaded] = useState(false)
   const [config, setConfig] = useState({
     nomeSalon: '',
     telefone: '',
@@ -47,11 +48,12 @@ export default function ConfiguracoesPage() {
         }
       })
       .catch((error) => console.error('[v0] Erro ao carregar configurações:', error))
+      .finally(() => setSettingsLoaded(true))
   }, [router])
 
   // Auto-save com debounce quando config muda
   useEffect(() => {
-    if (!user) return
+    if (!user || !settingsLoaded) return
 
     // Limpar timer anterior
     if (debounceTimerRef.current) {
@@ -68,7 +70,7 @@ export default function ConfiguracoesPage() {
         clearTimeout(debounceTimerRef.current)
       }
     }
-  }, [config, user])
+  }, [config, user, settingsLoaded])
 
   const saveConfigToDatabase = useCallback(async () => {
     if (!user) return

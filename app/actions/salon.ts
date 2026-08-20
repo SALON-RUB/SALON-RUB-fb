@@ -1,7 +1,7 @@
 'use server'
 
 import crypto from 'crypto'
-import { and, eq } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { headers } from 'next/headers'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
@@ -105,11 +105,25 @@ export async function getSalonSettings() {
 
 export async function saveSalonSettings(settings: Record<string, unknown>) {
   const userId = await getAuthenticatedUserId()
-  const result = await db.update(salons)
-    .set({ settings, updatedAt: new Date() })
-    .where(and(eq(salons.ownerId, userId)))
-    .returning({ id: salons.id, settings: salons.settings })
-  if (!result[0]) throw new Error('Salão não encontrado')
+  const existing = await db.select({ id: salons.id }).from(salons).where(eq(salons.ownerId, userId)).limit(1)
+
+  if (existing[0]) {
+    const result = await db.update(salons)
+      .set({ settings, updatedAt: new Date() })
+      .where(eq(salons.id, existing[0].id))
+      .returning({ id: salons.id, settings: salons.settings })
+    return result[0]
+  }
+
+  const result = await db.insert(salons).values({
+    ownerId: userId,
+    name: typeof settings.nomeSalon === 'string' && settings.nomeSalon.trim() ? settings.nomeSalon.trim() : 'Meu Salão',
+    phone: typeof settings.telefone === 'string' ? settings.telefone : null,
+    address: typeof settings.endereco === 'string' ? settings.endereco : null,
+    salonCode: crypto.randomBytes(5).toString('hex').toUpperCase(),
+    settings,
+  }).returning({ id: salons.id, settings: salons.settings })
+
   return result[0]
 }
 
