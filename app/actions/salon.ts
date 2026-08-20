@@ -1,6 +1,11 @@
 'use server'
 
 import crypto from 'crypto'
+import { and, eq } from 'drizzle-orm'
+import { headers } from 'next/headers'
+import { auth } from '@/lib/auth'
+import { db } from '@/lib/db'
+import { salons } from '@/lib/db/schema'
 
 // Simular localStorage no servidor (em client components, localStorage real será usado)
 const storageMap: { [key: string]: string } = {}
@@ -84,6 +89,28 @@ export async function getSalonById(salonId: string) {
     console.error('[v0] Erro ao buscar salão:', error)
     return null
   }
+}
+
+async function getAuthenticatedUserId() {
+  const session = await auth.api.getSession({ headers: await headers() })
+  if (!session?.user?.id) throw new Error('Não autorizado')
+  return session.user.id
+}
+
+export async function getSalonSettings() {
+  const userId = await getAuthenticatedUserId()
+  const result = await db.select({ id: salons.id, settings: salons.settings }).from(salons).where(eq(salons.ownerId, userId)).limit(1)
+  return result[0] ?? null
+}
+
+export async function saveSalonSettings(settings: Record<string, unknown>) {
+  const userId = await getAuthenticatedUserId()
+  const result = await db.update(salons)
+    .set({ settings, updatedAt: new Date() })
+    .where(and(eq(salons.ownerId, userId)))
+    .returning({ id: salons.id, settings: salons.settings })
+  if (!result[0]) throw new Error('Salão não encontrado')
+  return result[0]
 }
 
 export async function addService(salonId: string, service: any) {
