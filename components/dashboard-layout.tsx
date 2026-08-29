@@ -3,6 +3,7 @@
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
+import { SubscriptionGate } from '@/components/subscription-gate'
 import {
   Home,
   Calendar,
@@ -15,6 +16,7 @@ import {
   Menu,
   X,
   Gift,
+  CreditCard,
 } from 'lucide-react'
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -50,6 +52,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     { label: 'Pontos de Fidelização', href: '/dashboard/loyalty', icon: Gift },
     { label: 'Financeiro', href: '/dashboard/financeiro', icon: DollarSign },
     { label: 'Código do Salão', href: '/dashboard/codigo', icon: Key },
+    { label: 'Mensalidade', href: '/dashboard/assinatura', icon: CreditCard },
     { label: 'Configurações', href: '/dashboard/configuracoes', icon: Settings },
   ]
 
@@ -146,7 +149,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-auto">{children}</main>
+        <main className="flex-1 overflow-auto"><SubscriptionGate>{children}</SubscriptionGate></main>
       </div>
     </div>
   )

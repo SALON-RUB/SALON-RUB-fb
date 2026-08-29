@@ -6,16 +6,13 @@ import { DashboardLayout } from '@/components/dashboard-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { AnimatedBackground } from '@/components/animated-background'
 import { Gift, TrendingUp, Users, Zap } from 'lucide-react'
+import { getLoyaltyStats } from '@/app/actions/loyalty'
 
 export default function LoyaltyPage() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
-  const [stats, setStats] = useState({
-    totalPoints: 0,
-    pointsThisMonth: 0,
-    activeClients: 0,
-    employeesCount: 0,
-  })
+  const [transactions, setTransactions] = useState<any[]>([])
+  const [stats, setStats] = useState({ totalPoints: 0, pointsThisMonth: 0, activeClients: 0, employeesCount: 0 })
 
   useEffect(() => {
     const session = localStorage.getItem('user_session')
@@ -32,21 +29,10 @@ export default function LoyaltyPage() {
 
     setUser(sessionData)
 
-    // Simular dados de loyalty (em produção viriam do banco de dados)
-    const appointments = JSON.parse(localStorage.getItem('appointments') || '[]')
-    const employeeAccounts = JSON.parse(localStorage.getItem('employee_accounts') || '[]')
-    
-    if (true) {
-      const employees = employeeAccounts.filter((e: any) => e.salonCode === sessionData.salonCode)
-      const salonAppointments = appointments.filter((a: any) => a.salonCode === sessionData.salonCode)
-      
-      setStats({
-        totalPoints: Math.floor(Math.random() * 10000) + 5000,
-        pointsThisMonth: Math.floor(Math.random() * 2000) + 500,
-        activeClients: appointments.length > 0 ? Math.ceil(appointments.length * 0.7) : 0,
-        employeesCount: employees.length,
-      })
-    }
+    getLoyaltyStats().then((data) => {
+      setStats((current) => ({ ...current, totalPoints: data.totalPoints, pointsThisMonth: data.pointsThisMonth, activeClients: data.activeClients }))
+      setTransactions(data.transactions)
+    }).catch((error) => console.error('[v0] Erro ao carregar Loyalty:', error))
   }, [router])
 
   if (!user) return null
@@ -206,20 +192,12 @@ export default function LoyaltyPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="flex items-center justify-between pb-3 border-b border-border last:border-0">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
-                      <Gift className="w-5 h-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="font-medium">Cliente {i + 1}</p>
-                      <p className="text-xs text-muted-foreground">Agendamento realizado</p>
-                    </div>
-                  </div>
-                  <p className="font-bold text-primary">+{Math.floor(Math.random() * 100) + 50}p</p>
+              {transactions.length ? transactions.map((transaction) => (
+                <div key={transaction.id} className="flex items-center justify-between pb-3 border-b border-border last:border-0">
+                  <div className="flex items-center gap-3"><div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center"><Gift className="w-5 h-5 text-primary" /></div><div><p className="font-medium">{transaction.clientName}</p><p className="text-xs text-muted-foreground">Agendamento concluído em {new Date(`${transaction.date}T12:00:00`).toLocaleDateString('pt-BR')}</p></div></div>
+                  <p className="font-bold text-primary">+{transaction.points}p</p>
                 </div>
-              ))}
+              )) : <p className="text-muted-foreground">Nenhum ponto registrado ainda.</p>}
             </div>
           </CardContent>
         </Card>
