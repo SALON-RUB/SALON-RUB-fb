@@ -3,7 +3,7 @@
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { salons, services } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 
@@ -76,7 +76,7 @@ export async function updateService(
       updatedAt: new Date(),
     })
     .where(
-      eq(services.salonId, salon.id) && eq(services.id, serviceId as any)
+      and(eq(services.salonId, salon.id), eq(services.id, serviceId))
     )
     .returning()
 
@@ -91,7 +91,7 @@ export async function deleteService(serviceId: string) {
   await db
     .delete(services)
     .where(
-      eq(services.salonId, salon.id) && eq(services.id, serviceId as any)
+      and(eq(services.salonId, salon.id), eq(services.id, serviceId))
     )
 
   revalidatePath('/dashboard/servicos')

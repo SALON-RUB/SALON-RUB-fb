@@ -7,12 +7,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Toast } from '@/components/toast'
 import { Scissors, Plus, X, Edit2, Trash2 } from 'lucide-react'
-import { addService, getServicesBySalon, updateService, deleteService } from '@/app/actions/salon'
+import { createService, getServices, updateService, deleteService } from '@/app/actions/services'
 
 export default function ServicosPage() {
   const [isPending, startTransition] = useTransition()
   const [services, setServices] = useState<any[]>([])
-  const [salonId, setSalonId] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [showToast, setShowToast] = useState(false)
@@ -26,45 +25,17 @@ export default function ServicosPage() {
   })
 
   useEffect(() => {
-    const carregarDados = async () => {
-      try {
-        // Primeiro tenta user_session
-        const userSession = localStorage.getItem('user_session')
-        if (userSession) {
-          const userData = JSON.parse(userSession)
-          
-          if (userData.salonId) {
-            setSalonId(userData.salonId)
-            const data = await getServicesBySalon(userData.salonId)
-            setServices(data)
-            return
-          }
-        }
-        
-        // Se não tem salonId em user_session, tenta salon_session
-        const salonSession = localStorage.getItem('salon_session')
-        if (salonSession) {
-          const salon = JSON.parse(salonSession)
-          
-          const salonIdToUse = salon.salonId || salon.id
-          if (salonIdToUse) {
-            setSalonId(salonIdToUse)
-            const data = await getServicesBySalon(salonIdToUse)
-            setServices(data)
-            return
-          }
-        }
-      } catch (error) {
-        console.error('Erro ao carregar dados de serviços:', error)
-      }
-    }
-    
-    carregarDados()
+    void getServices().then(setServices).catch((error: any) => {
+      console.error('[v0] Erro ao carregar dados de serviços:', error)
+      setToastMessage(error.message || 'Erro ao carregar serviços')
+      setToastType('error')
+      setShowToast(true)
+    })
   }, [])
 
-  const loadServices = async (id: string) => {
+  const loadServices = async () => {
     try {
-      const data = await getServicesBySalon(id)
+      const data = await getServices()
       setServices(data)
     } catch (error: any) {
       console.error('[v0] Erro ao carregar:', error)
@@ -83,36 +54,10 @@ export default function ServicosPage() {
       return
     }
 
-    // Garantir que temos um salonId válido
-    let activeSalonId = salonId
-    
-    if (!activeSalonId) {
-      const userSession = localStorage.getItem('user_session')
-      if (userSession) {
-        const userData = JSON.parse(userSession)
-        activeSalonId = userData.salonId
-      }
-      
-      if (!activeSalonId) {
-        const salonSession = localStorage.getItem('salon_session')
-        if (salonSession) {
-          const salon = JSON.parse(salonSession)
-          activeSalonId = salon.salonId || salon.id
-        }
-      }
-    }
-
-    if (!activeSalonId) {
-      setToastMessage('Erro: Salão não identificado. Recarregue a página.')
-      setToastType('error')
-      setShowToast(true)
-      return
-    }
-
     startTransition(async () => {
       try {
         if (editingId) {
-          await updateService(editingId, activeSalonId, {
+          await updateService(editingId, {
             name: formData.name,
             category: formData.category,
             duration: parseInt(formData.duration),
@@ -120,7 +65,7 @@ export default function ServicosPage() {
           })
           setToastMessage('Serviço atualizado com sucesso!')
         } else {
-          await addService(activeSalonId, {
+          await createService({
             name: formData.name,
             category: formData.category,
             duration: parseInt(formData.duration),
@@ -135,28 +80,7 @@ export default function ServicosPage() {
         setToastType('success')
         setShowToast(true)
         
-        // Atualizar lista de serviços
-        setSalonId(activeSalonId)
-        await loadServices(activeSalonId)
-
-        // Sincronizar com localStorage para aparecer na página de clientes
-        const userSession = localStorage.getItem('user_session')
-        if (userSession) {
-          const userData = JSON.parse(userSession)
-          const salonSession = localStorage.getItem('salon_session')
-          if (salonSession) {
-            const salonData = JSON.parse(salonSession)
-            const ownerAccounts = JSON.parse(localStorage.getItem('owner_accounts') || '[]')
-            const accountIndex = ownerAccounts.findIndex((acc: any) => acc.salonId === salonData.id)
-            if (accountIndex >= 0) {
-              ownerAccounts[accountIndex].salon = {
-                ...ownerAccounts[accountIndex].salon,
-                services: await getServicesBySalon(activeSalonId)
-              }
-              localStorage.setItem('owner_accounts', JSON.stringify(ownerAccounts))
-            }
-          }
-        }
+        await loadServices()
       } catch (error: any) {
         setToastMessage(error.message || 'Erro ao salvar serviço')
         setToastType('error')
@@ -166,15 +90,13 @@ export default function ServicosPage() {
   }
 
   const handleDeleteService = (serviceId: string) => {
-    if (!salonId) return
-
     startTransition(async () => {
       try {
-        await deleteService(serviceId, salonId)
+        await deleteService(serviceId)
         setToastMessage('Serviço deletado com sucesso!')
         setToastType('success')
         setShowToast(true)
-        await loadServices(salonId)
+        await loadServices()
       } catch (error: any) {
         setToastMessage(error.message || 'Erro ao deletar serviço')
         setToastType('error')
