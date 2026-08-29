@@ -97,6 +97,26 @@ async function getAuthenticatedUserId() {
   return session.user.id
 }
 
+export async function ensureSalonProfile(name: string, phone?: string) {
+  const userId = await getAuthenticatedUserId()
+  const existing = await db.select({ id: salons.id, salonCode: salons.salonCode, name: salons.name }).from(salons).where(eq(salons.ownerId, userId)).limit(1)
+  if (existing[0]) return existing[0]
+
+  const result = await db.insert(salons).values({
+    ownerId: userId,
+    name: name.trim() || 'Meu Salão',
+    phone: phone?.trim() || null,
+    salonCode: crypto.randomBytes(5).toString('hex').toUpperCase(),
+  }).returning({ id: salons.id, salonCode: salons.salonCode, name: salons.name })
+  return result[0]
+}
+
+export async function getCurrentSalon() {
+  const userId = await getAuthenticatedUserId()
+  const result = await db.select({ id: salons.id, name: salons.name, salonCode: salons.salonCode, settings: salons.settings }).from(salons).where(eq(salons.ownerId, userId)).limit(1)
+  return result[0] ?? null
+}
+
 export async function getSalonSettings() {
   const userId = await getAuthenticatedUserId()
   const result = await db.select({ id: salons.id, settings: salons.settings }).from(salons).where(eq(salons.ownerId, userId)).limit(1)
