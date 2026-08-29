@@ -8,11 +8,13 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Toast } from '@/components/toast'
 import { Settings, Clock, Save } from 'lucide-react'
+import { getSalonSettings, saveSalonSettings } from '@/app/actions/salon'
 
 export default function ConfiguracoesPage() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [showToast, setShowToast] = useState(false)
+  const [settingsLoaded, setSettingsLoaded] = useState(false)
   const [config, setConfig] = useState({
     nomeSalon: '',
     telefone: '',
@@ -39,18 +41,19 @@ export default function ConfiguracoesPage() {
     const sessionData = JSON.parse(userSession)
     setUser(sessionData)
 
-    // Buscar configuração do localStorage (owner_accounts)
-    const accounts = JSON.parse(localStorage.getItem('owner_accounts') || '[]')
-    const account = accounts.find((acc: any) => acc.email === sessionData.email)
-    
-    if (account?.config) {
-      setConfig(account.config)
-    }
+    void getSalonSettings()
+      .then((saved) => {
+        if (saved?.settings && Object.keys(saved.settings).length > 0) {
+          setConfig((current) => ({ ...current, ...(saved.settings as typeof current) }))
+        }
+      })
+      .catch((error) => console.error('[v0] Erro ao carregar configurações:', error))
+      .finally(() => setSettingsLoaded(true))
   }, [router])
 
   // Auto-save com debounce quando config muda
   useEffect(() => {
-    if (!user) return
+    if (!user || !settingsLoaded) return
 
     // Limpar timer anterior
     if (debounceTimerRef.current) {
@@ -59,7 +62,7 @@ export default function ConfiguracoesPage() {
 
     // Definir novo timer
     debounceTimerRef.current = setTimeout(() => {
-      saveConfigToLocalStorage()
+      void saveConfigToDatabase()
     }, 500) // Aguarda 500ms após mudança
 
     return () => {
@@ -67,30 +70,23 @@ export default function ConfiguracoesPage() {
         clearTimeout(debounceTimerRef.current)
       }
     }
-  }, [config, user])
+  }, [config, user, settingsLoaded])
 
-  const saveConfigToLocalStorage = useCallback(() => {
+  const saveConfigToDatabase = useCallback(async () => {
     if (!user) return
-    
+
     try {
-      // Salvar em owner_accounts
-      const ownerAccounts = JSON.parse(localStorage.getItem('owner_accounts') || '[]')
-      const ownerIndex = ownerAccounts.findIndex((acc: any) => acc.email === user.email)
-      
-      if (ownerIndex >= 0) {
-        ownerAccounts[ownerIndex].config = config
-        localStorage.setItem('owner_accounts', JSON.stringify(ownerAccounts))
-      }
-      
+      await saveSalonSettings(config)
       setShowToast(true)
       setTimeout(() => setShowToast(false), 2000)
     } catch (error) {
-      console.error('Erro ao salvar configurações:', error)
+      console.error('[v0] Erro ao salvar configurações:', error)
+      setShowToast(false)
     }
   }, [user, config])
 
   const handleSaveConfig = () => {
-    saveConfigToLocalStorage()
+    void saveConfigToDatabase()
   }
 
   if (!user) return null

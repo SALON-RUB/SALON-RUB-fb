@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { DashboardLayout } from '@/components/dashboard-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Calendar, DollarSign, Users, Scissors } from 'lucide-react'
-import { createSalonIfNotExists, getSalonByCode } from '@/app/actions/salon'
+import { ensureSalonProfile, getCurrentSalon } from '@/app/actions/salon'
 import { AnimatedBackground } from '@/components/animated-background'
 
 export default function DashboardPage() {
@@ -33,7 +33,7 @@ export default function DashboardPage() {
       // Criar ou buscar salão
       const initSalon = async () => {
         try {
-          const salonData = await createSalonIfNotExists(userData.userId, userData.fullName)
+          const salonData = (await getCurrentSalon()) || await ensureSalonProfile(userData.nomeSalao || userData.fullName || 'Meu Salão')
           if (salonData) {
             setSalon(salonData)
             // Atualizar sessão com salonId

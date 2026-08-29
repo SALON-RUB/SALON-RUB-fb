@@ -9,6 +9,7 @@ import {
   varchar,
   date,
   pgEnum,
+  jsonb,
 } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 
@@ -70,6 +71,7 @@ export const salons = pgTable('salons', {
   phone: varchar('phone', { length: 20 }),
   address: varchar('address', { length: 500 }),
   salonCode: varchar('salon_code', { length: 10 }).notNull().unique(),
+  settings: jsonb('settings').$type<Record<string, unknown>>().notNull().default({}),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 })
