@@ -76,6 +76,7 @@ export const salons = pgTable('salons', {
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
   trialStartedAt: timestamp('trial_started_at'),
+  isActive: boolean('is_active').notNull().default(true),
 })
 
 export const services = pgTable('services', {

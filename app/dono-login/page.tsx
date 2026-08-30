@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Toast } from '@/components/toast'
-import { Scissors, ArrowLeft } from 'lucide-react'
+import { Scissors, ArrowLeft, ShieldCheck } from 'lucide-react'
 import { authClient } from '@/lib/auth-client'
 import { ensureSalonProfile } from '@/app/actions/salon'
 
@@ -136,7 +136,8 @@ export default function OwnerLoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground p-4 flex items-center justify-center">
+    <div className="relative min-h-screen bg-background text-foreground p-4 flex items-center justify-center">
+      <Button type="button" variant="outline" size="sm" className="absolute right-4 top-4 border-primary/50 text-primary" onClick={() => router.push('/admin')}><span aria-hidden="true">🟢</span><ShieldCheck data-icon="inline-start" />ADM</Button>
       {showToast && (
         <Toast message={toastMessage} type={toastType} isVisible={showToast} onClose={() => setShowToast(false)} />
       )}

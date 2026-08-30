@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { CheckCircle2, Clipboard, CreditCard, FileCheck2, LockKeyhole, Upload } from 'lucide-react'
 import { getSubscriptionStatus, submitSubscriptionProof } from '@/app/actions/subscription'
 import { Button } from '@/components/ui/button'
@@ -11,6 +12,7 @@ import { Label } from '@/components/ui/label'
 const FALLBACK_PIX = '541af7f1-69e7-43a2-8922-e8b40cefe911'
 
 export default function AssinaturaPage() {
+  const router = useRouter()
   const [status, setStatus] = useState<any>(null)
   const [file, setFile] = useState<File | null>(null)
   const [message, setMessage] = useState('')
@@ -54,10 +56,10 @@ export default function AssinaturaPage() {
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-6">
-      <header>
-        <p className="text-sm font-medium text-primary">Área do salão</p>
+      <header className="flex items-start justify-between gap-4">
+        <div><p className="text-sm font-medium text-primary">Área do salão</p>
         <h1 className="text-3xl font-bold tracking-tight">Mensalidade</h1>
-        <p className="mt-2 text-muted-foreground">Pague e envie o comprovante sem sair do seu salão.</p>
+        <p className="mt-2 text-muted-foreground">Pague e envie o comprovante sem sair do seu salão.</p></div><Button type="button" variant="outline" onClick={() => router.push('/dashboard')}>Voltar ao início</Button>
       </header>
 
       {status?.trialActive && (
