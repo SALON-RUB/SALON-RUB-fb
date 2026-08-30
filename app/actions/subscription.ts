@@ -13,7 +13,7 @@ const AMOUNT = '100.00'
 async function getSalon() {
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session?.user) throw new Error('Não autorizado')
-  const result = await db.select({ id: salons.id, createdAt: salons.createdAt, trialStartedAt: salons.trialStartedAt }).from(salons).where(eq(salons.ownerId, session.user.id)).limit(1)
+  const result = await db.select({ id: salons.id, createdAt: salons.createdAt, trialStartedAt: salons.trialStartedAt, isActive: salons.isActive }).from(salons).where(eq(salons.ownerId, session.user.id)).limit(1)
   if (!result[0]) throw new Error('Salão não encontrado')
   return result[0]
 }
@@ -36,8 +36,8 @@ export async function getSubscriptionStatus() {
   const trialStartedAt = new Date(salon.trialStartedAt as Date)
   const trialEndsAt = new Date(trialStartedAt.getTime() + 3 * 24 * 60 * 60 * 1000)
   const trialActive = Date.now() < trialEndsAt.getTime()
-  const active = subscription?.status === 'approved' || trialActive
-  return { active, trialActive, isFirstAccess: !subscription && trialActive, trialStartedAt: trialStartedAt.toISOString(), trialEndsAt: trialEndsAt.toISOString(), subscription: subscription ?? { amount: AMOUNT, pixKey: PIX_KEY, billingMonth: month, status: 'pending' } }
+  const active = salon.isActive !== false && (subscription?.status === 'approved' || trialActive)
+  return { active, trialActive, isFirstAccess: trialActive, trialStartedAt: trialStartedAt.toISOString(), trialEndsAt: trialEndsAt.toISOString(), subscription: subscription ?? { amount: AMOUNT, pixKey: PIX_KEY, billingMonth: month, status: 'pending' } }
 }
 
 export async function submitSubscriptionProof(proofPath: string) {
