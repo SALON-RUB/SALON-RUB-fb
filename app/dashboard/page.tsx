@@ -42,11 +42,7 @@ export default function DashboardPage() {
             localStorage.setItem('user_session', JSON.stringify(updatedSession))
             // Também salvar como salon_session para compatibilidade
             localStorage.setItem('salon_session', JSON.stringify(salonData))
-            const subscription = await getSubscriptionStatus()
-            if (!subscription.active) {
-              router.replace('/dashboard/assinatura')
-              return
-            }
+            await getSubscriptionStatus()
           }
         } catch (error) {
           console.error('[v0] Erro ao criar salão:', error)

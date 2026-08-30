@@ -13,7 +13,7 @@ const AMOUNT = '100.00'
 async function getSalon() {
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session?.user) throw new Error('Não autorizado')
-  const result = await db.select({ id: salons.id, createdAt: salons.createdAt }).from(salons).where(eq(salons.ownerId, session.user.id)).limit(1)
+  const result = await db.select({ id: salons.id, createdAt: salons.createdAt, trialStartedAt: salons.trialStartedAt }).from(salons).where(eq(salons.ownerId, session.user.id)).limit(1)
   if (!result[0]) throw new Error('Salão não encontrado')
   return result[0]
 }
@@ -24,13 +24,20 @@ function currentMonth() {
 }
 
 export async function getSubscriptionStatus() {
-  const salon = await getSalon()
+  let salon = await getSalon()
+  if (!salon.trialStartedAt) {
+    const startedAt = new Date()
+    await db.update(salons).set({ trialStartedAt: startedAt, updatedAt: startedAt }).where(eq(salons.id, salon.id))
+    salon = { ...salon, trialStartedAt: startedAt }
+  }
   const month = currentMonth()
   const rows = await db.select().from(salonSubscriptions).where(and(eq(salonSubscriptions.salonId, salon.id), eq(salonSubscriptions.billingMonth, month))).limit(1)
   const subscription = rows[0]
-  const createdThisMonth = salon.createdAt ? new Date(salon.createdAt).toISOString().slice(0, 7) === month.slice(0, 7) : false
-  const active = subscription?.status === 'approved' || (!subscription && createdThisMonth)
-  return { active, subscription: subscription ?? { amount: AMOUNT, pixKey: PIX_KEY, billingMonth: month, status: 'pending' } }
+  const trialStartedAt = new Date(salon.trialStartedAt as Date)
+  const trialEndsAt = new Date(trialStartedAt.getTime() + 3 * 24 * 60 * 60 * 1000)
+  const trialActive = Date.now() < trialEndsAt.getTime()
+  const active = subscription?.status === 'approved' || trialActive
+  return { active, trialActive, isFirstAccess: !subscription && trialActive, trialStartedAt: trialStartedAt.toISOString(), trialEndsAt: trialEndsAt.toISOString(), subscription: subscription ?? { amount: AMOUNT, pixKey: PIX_KEY, billingMonth: month, status: 'pending' } }
 }
 
 export async function submitSubscriptionProof(proofPath: string) {
