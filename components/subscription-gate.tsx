@@ -11,13 +11,16 @@ export function SubscriptionGate({ children }: { children: React.ReactNode }) {
   const [message, setMessage] = useState('')
   const [pending, startTransition] = useTransition()
   const pathname = usePathname()
-  const allowed = pathname === '/dashboard/loyalty'
+  const allowed = pathname === '/dashboard/loyalty' || pathname === '/dashboard/assinatura'
 
   useEffect(() => { getSubscriptionStatus().then(setStatus).catch(() => setStatus({ active: false, subscription: { amount: '100.00', pixKey: '541af7f1-69e7-43a2-8922-e8b40cefe911', status: 'pending' } })) }, [])
 
-  if (!status || status.active || allowed) return <>{children}</>
+  if (!status || allowed) return <>{children}</>
 
   const subscription = status.subscription
+  if (status.active && status.isFirstAccess) {
+    return <div className="relative min-h-full"><>{children}</><section className="fixed inset-x-4 bottom-6 z-30 mx-auto max-w-lg rounded-2xl border border-primary/50 bg-card p-5 text-center shadow-2xl"><h2 className="text-xl font-bold text-primary">SEU TESTE GRATUITO ACABA EM 3 DIAS</h2><p className="mt-2 text-sm text-muted-foreground">A partir de agora você pode usar todas as funções do salão. Depois de 3 dias, será necessário pagar a mensalidade de R$ 100,00.</p><p className="mt-3 text-xs text-muted-foreground">Vencimento do teste: {new Date(status.trialEndsAt).toLocaleString('pt-BR')}</p></section></div>
+  }
   const sendProof = () => {
     if (!file) return setMessage('Selecione o comprovante primeiro.')
     startTransition(async () => {

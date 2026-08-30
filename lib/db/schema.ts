@@ -74,6 +74,7 @@ export const salons = pgTable('salons', {
   settings: jsonb('settings').$type<Record<string, unknown>>().notNull().default({}),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
+  trialStartedAt: timestamp('trial_started_at'),
 })
 
 export const services = pgTable('services', {
