@@ -11,7 +11,7 @@ export function SubscriptionGate({ children }: { children: React.ReactNode }) {
   const [message, setMessage] = useState('')
   const [pending, startTransition] = useTransition()
   const pathname = usePathname()
-  const allowed = pathname === '/dashboard/loyalty' || pathname === '/dashboard/assinatura'
+  const allowed = pathname === '/dashboard/loyalty'
 
   useEffect(() => { getSubscriptionStatus().then(setStatus).catch(() => setStatus({ active: false, subscription: { amount: '100.00', pixKey: '541af7f1-69e7-43a2-8922-e8b40cefe911', status: 'pending' } })) }, [])
 

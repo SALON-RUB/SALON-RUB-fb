@@ -6,6 +6,7 @@ import { DashboardLayout } from '@/components/dashboard-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Calendar, DollarSign, Users, Scissors } from 'lucide-react'
 import { ensureSalonProfile, getCurrentSalon } from '@/app/actions/salon'
+import { getSubscriptionStatus } from '@/app/actions/subscription'
 import { AnimatedBackground } from '@/components/animated-background'
 
 export default function DashboardPage() {
@@ -41,6 +42,11 @@ export default function DashboardPage() {
             localStorage.setItem('user_session', JSON.stringify(updatedSession))
             // Também salvar como salon_session para compatibilidade
             localStorage.setItem('salon_session', JSON.stringify(salonData))
+            const subscription = await getSubscriptionStatus()
+            if (!subscription.active) {
+              router.replace('/dashboard/assinatura')
+              return
+            }
           }
         } catch (error) {
           console.error('[v0] Erro ao criar salão:', error)
