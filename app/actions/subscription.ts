@@ -37,7 +37,7 @@ export async function getSubscriptionStatus() {
   const trialEndsAt = new Date(trialStartedAt.getTime() + 3 * 24 * 60 * 60 * 1000)
   const trialActive = Date.now() < trialEndsAt.getTime()
   const active = salon.isActive !== false && (subscription?.status === 'approved' || trialActive)
-  return { active, trialActive, isFirstAccess: !subscription && trialActive, trialStartedAt: trialStartedAt.toISOString(), trialEndsAt: trialEndsAt.toISOString(), subscription: subscription ?? { amount: AMOUNT, pixKey: PIX_KEY, billingMonth: month, status: 'pending' } }
+  return { active, trialActive, isFirstAccess: trialActive, trialStartedAt: trialStartedAt.toISOString(), trialEndsAt: trialEndsAt.toISOString(), subscription: subscription ?? { amount: AMOUNT, pixKey: PIX_KEY, billingMonth: month, status: 'pending' } }
 }
 
 export async function submitSubscriptionProof(proofPath: string) {
