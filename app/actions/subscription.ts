@@ -54,4 +54,6 @@ export async function getSubscriptionHistory() {
   return db.select().from(salonSubscriptions).where(eq(salonSubscriptions.salonId, salon.id)).orderBy(desc(salonSubscriptions.billingMonth))
 }
 
-export { PIX_KEY, AMOUNT }
+export async function getSubscriptionConstants() {
+  return { pixKey: PIX_KEY, amount: AMOUNT }
+}

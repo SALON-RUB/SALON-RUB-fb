@@ -10,6 +10,7 @@ import {
   date,
   pgEnum,
   jsonb,
+  unique,
 } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 
@@ -149,7 +150,9 @@ export const salonSubscriptions = pgTable('salon_subscriptions', {
   reviewedBy: text('reviewed_by'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
-})
+}, (table) => ({
+  salonMonthUnique: unique().on(table.salonId, table.billingMonth),
+}))
 
 export const businessHours = pgTable('business_hours', {
   id: uuid('id').primaryKey().defaultRandom(),
