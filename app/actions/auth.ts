@@ -3,19 +3,19 @@
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { salons, employees, user } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { headers } from 'next/headers'
 import crypto from 'crypto'
 
 export async function getUserRole(userId: string, salonId: string) {
   const isOwner = await db.query.salons.findFirst({
-    where: eq(salons.ownerId, userId) && eq(salons.id, salonId as any),
+    where: and(eq(salons.ownerId, userId), eq(salons.id, salonId)),
   })
 
   if (isOwner) return 'owner'
 
   const employee = await db.query.employees.findFirst({
-    where: eq(employees.userId, userId) && eq(employees.salonId, salonId as any),
+    where: and(eq(employees.userId, userId), eq(employees.salonId, salonId)),
   })
 
   return employee?.role || null
@@ -42,7 +42,7 @@ export async function isEmployee(salonId: string) {
   if (!session?.user) return false
 
   const employee = await db.query.employees.findFirst({
-    where: eq(employees.userId, session.user.id) && eq(employees.salonId, salonId as any),
+    where: and(eq(employees.userId, session.user.id), eq(employees.salonId, salonId)),
   })
 
   return !!employee
