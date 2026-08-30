@@ -102,10 +102,15 @@ export async function ensureSalonProfile(name: string, phone?: string) {
   const existing = await db.select({ id: salons.id, salonCode: salons.salonCode, name: salons.name }).from(salons).where(eq(salons.ownerId, userId)).limit(1)
   if (existing[0]) return existing[0]
 
+  const normalizedPhone = phone?.trim() || null
+  const safePhone = normalizedPhone && !normalizedPhone.includes('@')
+    ? normalizedPhone.replace(/[^0-9+()\-\s]/g, '').slice(0, 20) || null
+    : null
+
   const result = await db.insert(salons).values({
     ownerId: userId,
     name: name.trim() || 'Meu Salão',
-    phone: phone?.trim() || null,
+    phone: safePhone,
     salonCode: crypto.randomBytes(5).toString('hex').toUpperCase(),
   }).returning({ id: salons.id, salonCode: salons.salonCode, name: salons.name })
   return result[0]
