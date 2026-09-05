@@ -111,7 +111,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
       <div className="flex">
         {/* Sidebar Desktop */}
-        <aside className="hidden md:flex md:w-64 bg-card border-r border-border flex-col">
+        <aside className="relative z-40 hidden md:flex md:w-64 bg-card border-r border-border flex-col">
           <div className="p-6 border-b border-border">
             <h1 className="text-2xl font-bold">
               <span className="text-primary">Salon</span> <span className="text-foreground">Rub</span>
