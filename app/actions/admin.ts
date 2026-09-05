@@ -35,8 +35,9 @@ export async function setSalonActive(salonId: string, isActive: boolean) {
 
 export async function approveSubscription(salonId: string) {
   await requireAdmin()
-  const month = `${new Date().getUTCFullYear()}-${String(new Date().getUTCMonth() + 1).padStart(2, '0')}-01`
-  await db.update(salonSubscriptions).set({ status: 'approved', reviewedAt: new Date(), reviewedBy: 'admin', updatedAt: new Date() }).where(and(eq(salonSubscriptions.salonId, salonId), eq(salonSubscriptions.billingMonth, month)))
+  const now = new Date()
+  const month = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-01`
+  await db.update(salonSubscriptions).set({ status: 'approved', reviewedAt: now, reviewedBy: 'admin', updatedAt: now }).where(and(eq(salonSubscriptions.salonId, salonId), eq(salonSubscriptions.billingMonth, month)))
   await db.update(salons).set({ isActive: true, updatedAt: new Date() }).where(eq(salons.id, salonId))
   revalidatePath('/admin')
   revalidatePath('/dashboard')
