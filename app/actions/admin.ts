@@ -35,11 +35,15 @@ export async function setSalonActive(salonId: string, isActive: boolean) {
 
 export async function approveSubscription(salonId: string) {
   await requireAdmin()
-  const month = `${new Date().getUTCFullYear()}-${String(new Date().getUTCMonth() + 1).padStart(2, '0')}-01`
-  await db.update(salonSubscriptions).set({ status: 'approved', reviewedAt: new Date(), reviewedBy: 'admin', updatedAt: new Date() }).where(and(eq(salonSubscriptions.salonId, salonId), eq(salonSubscriptions.billingMonth, month)))
-  await db.update(salons).set({ isActive: true, updatedAt: new Date() }).where(eq(salons.id, salonId))
+  const now = new Date()
+  const pendingSubscription = await db.select({ id: salonSubscriptions.id }).from(salonSubscriptions).where(and(eq(salonSubscriptions.salonId, salonId), eq(salonSubscriptions.status, 'pending'))).orderBy(desc(salonSubscriptions.createdAt)).limit(1)
+  if (!pendingSubscription[0]) return { ok: false, error: 'Comprovante pendente não encontrado.' }
+
+  await db.update(salonSubscriptions).set({ status: 'approved', reviewedAt: now, reviewedBy: 'admin', updatedAt: now }).where(eq(salonSubscriptions.id, pendingSubscription[0].id))
+  await db.update(salons).set({ isActive: true, updatedAt: now }).where(eq(salons.id, salonId))
   revalidatePath('/admin')
   revalidatePath('/dashboard')
+  revalidatePath('/dashboard/assinatura')
   return { ok: true }
 }
 

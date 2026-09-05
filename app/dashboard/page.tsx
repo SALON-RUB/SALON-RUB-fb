@@ -13,6 +13,7 @@ export default function DashboardPage() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [salon, setSalon] = useState<any>(null)
+  const [subscription, setSubscription] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -42,7 +43,8 @@ export default function DashboardPage() {
             localStorage.setItem('user_session', JSON.stringify(updatedSession))
             // Também salvar como salon_session para compatibilidade
             localStorage.setItem('salon_session', JSON.stringify(salonData))
-            await getSubscriptionStatus()
+            const subscriptionStatus = await getSubscriptionStatus()
+            setSubscription(subscriptionStatus)
           }
         } catch (error) {
           console.error('[v0] Erro ao criar salão:', error)
@@ -84,6 +86,25 @@ export default function DashboardPage() {
           <h1 className="text-3xl font-bold">Dashboard</h1>
           <p className="text-muted-foreground">Bem-vindo, {user.fullName}!</p>
         </div>
+
+        {subscription && (
+          <Card className={subscription.trialActive ? 'border-primary/40 bg-primary/5' : 'border-destructive/40 bg-destructive/5'}>
+            <CardHeader>
+              <CardTitle>{subscription.trialActive ? 'SEU TESTE GRATUITO' : 'Mensalidade pendente'}</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-lg font-semibold">
+                  {subscription.trialActive
+                    ? `Faltam ${subscription.trialDaysRemaining} ${subscription.trialDaysRemaining === 1 ? 'dia' : 'dias'} para a próxima mensalidade`
+                    : 'O período gratuito terminou. A mensalidade está disponível para pagamento.'}
+                </p>
+                {subscription.trialActive && <p className="text-sm text-muted-foreground">Aproximadamente {subscription.trialHoursRemaining} horas restantes. Vencimento: {new Date(subscription.trialEndsAt).toLocaleString('pt-BR')}</p>}
+              </div>
+              <button type="button" onClick={() => router.push('/dashboard/assinatura')} className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">Ver mensalidade</button>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
