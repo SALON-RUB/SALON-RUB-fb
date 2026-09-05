@@ -19,7 +19,7 @@ export default function AdminPage() {
 
   const login = () => startTransition(async () => { const result = await authenticateAdmin(password); if (!result.ok) return setMessage(result.error || 'Acesso negado.'); setMessage(''); load() })
   const toggle = (salon: any) => startTransition(async () => { await setSalonActive(salon.id, !salon.isActive); load() })
-  const approve = (salon: any) => startTransition(async () => { await approveSubscription(salon.id); setMessage('Comprovante aprovado e salão liberado até o fim do mês.'); load() })
+  const approve = (salon: any) => startTransition(async () => { try { const result = await approveSubscription(salon.id); if (!result.ok) { setMessage(result.error || 'Não foi possível aprovar o comprovante.'); return } setMessage('Comprovante aprovado e salão liberado até o fim do mês.'); load() } catch (error) { setMessage(error instanceof Error ? error.message : 'Não foi possível aprovar o comprovante.') } })
 
   if (!authenticated) return <main className="flex min-h-screen items-center justify-center bg-background p-6"><Card className="w-full max-w-md"><CardHeader><ShieldCheck className="text-primary" /><CardTitle>Painel ADM</CardTitle></CardHeader><CardContent className="flex flex-col gap-4"><p className="text-sm text-muted-foreground">Digite a senha administrativa para continuar.</p><Input type="password" placeholder="Senha ADM" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing && e.keyCode !== 229) login() }} /><Button onClick={login} disabled={pending}><LockKeyhole data-icon="inline-start" />Entrar</Button>{message && <p className="text-sm text-destructive" role="alert">{message}</p>}</CardContent></Card></main>
 

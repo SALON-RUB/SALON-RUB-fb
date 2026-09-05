@@ -137,7 +137,7 @@ export default function OwnerLoginPage() {
 
   return (
     <div className="relative min-h-screen bg-background text-foreground p-4 flex items-center justify-center">
-      <Button type="button" variant="ghost" size="icon" className="absolute right-4 top-4 text-emerald-500 hover:bg-emerald-500/10 hover:text-emerald-400" aria-label="Abrir acesso administrativo" onClick={() => router.push('/admin')}><span aria-hidden="true" className="text-2xl leading-none">●</span></Button>
+      <Button type="button" variant="ghost" size="icon" className="absolute right-4 top-4 z-50 cursor-pointer text-emerald-500 hover:bg-emerald-500/10 hover:text-emerald-400" aria-label="Abrir acesso administrativo" onClick={() => router.push('/admin')}><span aria-hidden="true" className="text-2xl leading-none">●</span></Button>
       {showToast && (
         <Toast message={toastMessage} type={toastType} isVisible={showToast} onClose={() => setShowToast(false)} />
       )}
