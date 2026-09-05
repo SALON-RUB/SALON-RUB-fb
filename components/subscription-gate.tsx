@@ -9,27 +9,15 @@ export function SubscriptionGate({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<any>(null)
   const [file, setFile] = useState<File | null>(null)
   const [message, setMessage] = useState('')
-  const [showTrialNotice, setShowTrialNotice] = useState(true)
   const [pending, startTransition] = useTransition()
   const pathname = usePathname()
   const allowed = pathname === '/dashboard/loyalty' || pathname === '/dashboard/assinatura'
 
   useEffect(() => { getSubscriptionStatus().then(setStatus).catch(() => setStatus({ active: false, subscription: { amount: '100.00', pixKey: '541af7f1-69e7-43a2-8922-e8b40cefe911', status: 'pending' } })) }, [])
-  useEffect(() => {
-    if (!status?.isFirstAccess) return
-    const timer = window.setTimeout(() => setShowTrialNotice(false), 10000)
-    return () => window.clearTimeout(timer)
-  }, [status?.isFirstAccess])
-
   if (!status || allowed) return <>{children}</>
 
   const subscription = status.subscription
-  if (status.active) {
-    return <>
-      {children}
-      {status.trialActive && showTrialNotice && <section aria-live="polite" className="pointer-events-none fixed inset-x-4 bottom-6 z-30 flex justify-center"><div className="pointer-events-auto w-full max-w-lg rounded-2xl border border-primary/50 bg-card p-5 text-center shadow-2xl"><h2 className="text-xl font-bold text-primary">SEU TESTE GRATUITO</h2><p className="mt-2 text-sm text-muted-foreground">Seu teste grátis acaba em {status.trialDaysRemaining} {status.trialDaysRemaining === 1 ? 'dia' : 'dias'}.</p><p className="mt-1 text-xs text-muted-foreground">Restam aproximadamente {status.trialHoursRemaining} horas.</p><p className="mt-3 text-xs text-muted-foreground">Vencimento: {new Date(status.trialEndsAt).toLocaleString('pt-BR')}</p></div></section>}
-    </>
-  }
+  if (status.active) return <>{children}</>
   const sendProof = () => {
     if (!file) return setMessage('Selecione o comprovante primeiro.')
     startTransition(async () => {
