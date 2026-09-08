@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Scissors, Calendar, Clock, User } from 'lucide-react'
 import { AnimatedBackground } from '@/components/animated-background'
-import { createAppointment } from '@/app/actions/appointments'
 
 export default function ClientePage() {
   const [step, setStep] = useState<'codigo' | 'agendamento' | 'confirmacao'>('codigo')
@@ -36,29 +35,18 @@ export default function ClientePage() {
     }
 
     try {
-      // Buscar o salão no localStorage dos donos
-      const ownerAccounts = JSON.parse(localStorage.getItem('owner_accounts') || '[]')
-      const account = ownerAccounts.find((acc: any) => acc.salonCode === salonCode.toUpperCase())
-      
-      if (!account) {
-        setError('Código do salão não encontrado')
+      const normalizedCode = salonCode.trim().toUpperCase()
+      const response = await fetch(`/api/public/salons/${encodeURIComponent(normalizedCode)}`, { cache: 'no-store' })
+      const data = await response.json().catch(() => null)
+
+      if (!response.ok || !data?.salon) {
+        setError(response.status === 404 ? 'Código do salão não encontrado no sistema.' : data?.error || 'Não foi possível carregar o salão.')
         setLoading(false)
         return
       }
 
-      // Buscar os serviços do salão
-      const allServices = JSON.parse(localStorage.getItem('services') || '[]')
-      const salonServices = allServices.filter((s: any) => s.salonCode === salonCode.toUpperCase())
-
-      const salonData = {
-        id: account.salonId,
-        name: account.nomeSalao,
-        salonCode: account.salonCode,
-        services: salonServices,
-      }
-
-      setSalon(salonData)
-      setServices(salonServices || [])
+      setSalon(data.salon)
+      setServices(data.services || [])
       setStep('agendamento')
     } catch (err) {
       setError('Erro ao buscar informações do salão')
@@ -79,15 +67,10 @@ export default function ClientePage() {
     }
 
     try {
-      const result = await createAppointment({
-        salonCode: salonCode.toUpperCase(),
-        clientName: nomeCliente,
-        clientPhone: telefoneCliente,
-        serviceId: servicoSelecionado,
-        appointmentDate: dataSelecionada,
-        appointmentTime: horaSelecionada,
-        notes: observacoes,
-      })
+      const response = await fetch('/api/public/appointments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ salonCode: salonCode.trim().toUpperCase(), clientName: nomeCliente.trim(), clientPhone: telefoneCliente.trim(), serviceId: servicoSelecionado, appointmentDate: dataSelecionada, appointmentTime: horaSelecionada, notes: observacoes.trim() }), cache: 'no-store' })
+      const data = await response.json().catch(() => null)
+      if (!response.ok || !data?.appointment) throw new Error(data?.error || 'Não foi possível criar o agendamento')
+      const result = data.appointment
 
       const servico = services.find((s) => s.id === servicoSelecionado)
       setAgendamentoConfirmado({
