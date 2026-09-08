@@ -36,29 +36,18 @@ export default function ClientePage() {
     }
 
     try {
-      // Buscar o salão no localStorage dos donos
-      const ownerAccounts = JSON.parse(localStorage.getItem('owner_accounts') || '[]')
-      const account = ownerAccounts.find((acc: any) => acc.salonCode === salonCode.toUpperCase())
-      
-      if (!account) {
-        setError('Código do salão não encontrado')
+      const normalizedCode = salonCode.trim().toUpperCase()
+      const response = await fetch(`/api/public/salons/${encodeURIComponent(normalizedCode)}`, { cache: 'no-store' })
+      const data = await response.json().catch(() => null)
+
+      if (!response.ok || !data?.salon) {
+        setError(response.status === 404 ? 'Código do salão não encontrado no sistema.' : data?.error || 'Não foi possível carregar o salão.')
         setLoading(false)
         return
       }
 
-      // Buscar os serviços do salão
-      const allServices = JSON.parse(localStorage.getItem('services') || '[]')
-      const salonServices = allServices.filter((s: any) => s.salonCode === salonCode.toUpperCase())
-
-      const salonData = {
-        id: account.salonId,
-        name: account.nomeSalao,
-        salonCode: account.salonCode,
-        services: salonServices,
-      }
-
-      setSalon(salonData)
-      setServices(salonServices || [])
+      setSalon(data.salon)
+      setServices(data.services || [])
       setStep('agendamento')
     } catch (err) {
       setError('Erro ao buscar informações do salão')
