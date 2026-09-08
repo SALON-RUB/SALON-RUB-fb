@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Scissors, Calendar, Clock, User } from 'lucide-react'
 import { AnimatedBackground } from '@/components/animated-background'
-import { createAppointment } from '@/app/actions/appointments'
 
 export default function ClientePage() {
   const [step, setStep] = useState<'codigo' | 'agendamento' | 'confirmacao'>('codigo')
@@ -68,15 +67,10 @@ export default function ClientePage() {
     }
 
     try {
-      const result = await createAppointment({
-        salonCode: salonCode.toUpperCase(),
-        clientName: nomeCliente,
-        clientPhone: telefoneCliente,
-        serviceId: servicoSelecionado,
-        appointmentDate: dataSelecionada,
-        appointmentTime: horaSelecionada,
-        notes: observacoes,
-      })
+      const response = await fetch('/api/public/appointments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ salonCode: salonCode.trim().toUpperCase(), clientName: nomeCliente.trim(), clientPhone: telefoneCliente.trim(), serviceId: servicoSelecionado, appointmentDate: dataSelecionada, appointmentTime: horaSelecionada, notes: observacoes.trim() }), cache: 'no-store' })
+      const data = await response.json().catch(() => null)
+      if (!response.ok || !data?.appointment) throw new Error(data?.error || 'Não foi possível criar o agendamento')
+      const result = data.appointment
 
       const servico = services.find((s) => s.id === servicoSelecionado)
       setAgendamentoConfirmado({
