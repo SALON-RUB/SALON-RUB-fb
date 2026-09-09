@@ -5,7 +5,7 @@ import { DashboardLayout } from '@/components/dashboard-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Calendar, Clock, User, Phone, CheckCircle, XCircle } from 'lucide-react'
-import { getAppointmentsBySalon, updateAppointmentStatus } from '@/app/actions/appointments'
+import { updateAppointmentStatus } from '@/app/actions/appointments'
 
 export default function AgendamentosPage() {
   const [isPending, startTransition] = useTransition()
@@ -14,14 +14,22 @@ export default function AgendamentosPage() {
 
   useEffect(() => {
     loadAppointments()
+    const interval = window.setInterval(loadAppointments, 15000)
+    return () => window.clearInterval(interval)
   }, [])
 
   const loadAppointments = async () => {
     try {
-      const data = await getAppointmentsBySalon()
-      setAppointments(data)
+      const session = JSON.parse(localStorage.getItem('user_session') || '{}')
+      const salonCode = typeof session.salonCode === 'string' ? session.salonCode.trim().toUpperCase() : ''
+      if (!salonCode) throw new Error('Código do salão não encontrado na sessão.')
+      const response = await fetch(`/api/public/salons/${encodeURIComponent(salonCode)}/appointments`, { cache: 'no-store' })
+      const data = await response.json().catch(() => null)
+      if (!response.ok) throw new Error(data?.error || 'Não foi possível carregar os agendamentos.')
+      setAppointments(data.appointments || [])
     } catch (error) {
-      console.error('Erro ao carregar agendamentos:', error)
+      console.error('[v0] Erro ao carregar agendamentos:', error)
+      setAppointments([])
     }
   }
 
