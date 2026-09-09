@@ -8,7 +8,7 @@ import { db } from '@/lib/db'
 import { salons, salonSubscriptions } from '@/lib/db/schema'
 
 const PIX_KEY = '541af7f1-69e7-43a2-8922-e8b40cefe911'
-const AMOUNT = '100.00'
+const AMOUNT = '29.99'
 
 async function getSalon() {
   const session = await auth.api.getSession({ headers: await headers() })
