@@ -142,7 +142,7 @@ export const salonSubscriptions = pgTable('salon_subscriptions', {
   id: uuid('id').primaryKey().defaultRandom(),
   salonId: uuid('salon_id').notNull().references(() => salons.id, { onDelete: 'cascade' }),
   billingMonth: date('billing_month').notNull(),
-  amount: decimal('amount', { precision: 10, scale: 2 }).notNull().default('100.00'),
+  amount: decimal('amount', { precision: 10, scale: 2 }).notNull().default('29.99'),
   pixKey: varchar('pix_key', { length: 255 }).notNull(),
   status: varchar('status', { length: 30 }).notNull().default('pending'),
   proofPath: text('proof_url'),

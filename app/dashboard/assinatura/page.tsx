@@ -69,7 +69,7 @@ export default function AssinaturaPage() {
       )}
 
       <Card>
-        <CardHeader><CardTitle className="flex items-center gap-2"><CreditCard className="text-primary" />Pagamento mensal via Pix</CardTitle><CardDescription>Valor fixo de R$ 100,00 para liberar os recursos administrativos.</CardDescription></CardHeader>
+        <CardHeader><CardTitle className="flex items-center gap-2"><CreditCard className="text-primary" />Pagamento mensal via Pix</CardTitle><CardDescription>Valor fixo de R$ 29,99 para liberar os recursos administrativos.</CardDescription></CardHeader>
         <CardContent className="flex flex-col gap-5">
           <div className="flex flex-col gap-2"><Label htmlFor="pix-key">Chave Pix</Label><div className="flex gap-2"><Input id="pix-key" readOnly value={pixKey} /><Button type="button" variant="outline" onClick={copyPix}>{copied ? <CheckCircle2 data-icon="inline-start" /> : <Clipboard data-icon="inline-start" />}{copied ? 'Copiada' : 'Copiar'}</Button></div></div>
           <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm"><p><strong>Mês de referência:</strong> {subscription?.billingMonth || 'Mês atual'}</p><p className="mt-1"><strong>Status:</strong> {subscription?.status === 'approved' ? 'Pagamento aprovado' : 'Aguardando comprovante/aprovação'}</p></div>
