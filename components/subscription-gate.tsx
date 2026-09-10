@@ -1,34 +1,30 @@
 'use client'
 
-import { useEffect, useState, useTransition } from 'react'
+import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
-import { Lock, Upload, Copy, CheckCircle2 } from 'lucide-react'
-import { getSubscriptionStatus, submitSubscriptionProof } from '@/app/actions/subscription'
+import { ExternalLink, Lock } from 'lucide-react'
+import { getSubscriptionStatus } from '@/app/actions/subscription'
 
 export function SubscriptionGate({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<any>(null)
-  const [file, setFile] = useState<File | null>(null)
-  const [message, setMessage] = useState('')
-  const [pending, startTransition] = useTransition()
   const pathname = usePathname()
   const allowed = pathname === '/dashboard/loyalty' || pathname === '/dashboard/assinatura'
 
-  useEffect(() => { getSubscriptionStatus().then(setStatus).catch(() => setStatus({ active: false, subscription: { amount: '29.99', pixKey: '541af7f1-69e7-43a2-8922-e8b40cefe911', status: 'pending' } })) }, [])
-  if (!status || allowed) return <>{children}</>
+  useEffect(() => {
+    getSubscriptionStatus().then(setStatus).catch(() => setStatus({ active: false, subscription: { amount: '29.99', status: 'pending' } }))
+  }, [])
+
+  if (!status || allowed || status.active) return <>{children}</>
 
   const subscription = status.subscription
-  if (status.active) return <>{children}</>
-  const sendProof = () => {
-    if (!file) return setMessage('Selecione o comprovante primeiro.')
-    startTransition(async () => {
-      const form = new FormData(); form.append('file', file)
-      const upload = await fetch('/api/subscription/proof', { method: 'POST', body: form })
-      const data = await upload.json()
-      if (!upload.ok) return setMessage(data.error || 'Erro ao enviar comprovante.')
-      await submitSubscriptionProof(data.pathname)
-      setMessage('Comprovante enviado. Aguarde a aprovação.')
-    })
-  }
-
-  return <div className="relative min-h-full pb-40">{children}<section className="fixed inset-x-4 bottom-4 z-30 mx-auto flex max-h-[calc(100vh-2rem)] w-full max-w-lg flex-col gap-4 overflow-y-auto rounded-2xl border border-primary/40 bg-card p-5 text-center shadow-xl"><Lock className="mx-auto text-primary" /><h2 className="text-2xl font-bold">Mensalidade pendente</h2><p className="text-sm text-muted-foreground">As páginas do salão continuam visíveis. Envie o pagamento para liberar o uso completo.</p><div className="flex items-center justify-between rounded-lg border border-border p-3 text-sm"><code className="truncate">{subscription.pixKey}</code><button aria-label="Copiar chave Pix" onClick={() => navigator.clipboard.writeText(subscription.pixKey)}><Copy /></button></div><p className="text-sm text-muted-foreground">Mês de referência: {subscription.billingMonth}</p><label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-border p-4"><Upload />{file?.name || 'Selecionar comprovante'}<input className="sr-only" type="file" accept="image/*,.pdf" onChange={(event) => setFile(event.target.files?.[0] || null)} /></label><button className="rounded-lg bg-primary px-4 py-3 font-medium text-primary-foreground disabled:opacity-50" disabled={pending} onClick={sendProof}>{pending ? 'Enviando...' : 'Enviar comprovante'}</button>{message && <p className="flex items-center justify-center gap-2 text-sm"><CheckCircle2 />{message}</p>}</section></div>
+  return <div className="relative min-h-full pb-40">
+    {children}
+    <section className="fixed inset-x-4 bottom-4 z-30 mx-auto flex max-h-[calc(100vh-2rem)] w-full max-w-lg flex-col gap-4 overflow-y-auto rounded-2xl border border-primary/40 bg-card p-5 text-center shadow-xl">
+      <Lock className="mx-auto text-primary" />
+      <h2 className="text-2xl font-bold">Mensalidade pendente</h2>
+      <p className="text-sm text-muted-foreground">Realize o pagamento pela Kiwify para liberar o uso completo. Depois, o painel ADM confirmará a liberação.</p>
+      <p className="text-sm text-muted-foreground">Mês de referência: {subscription.billingMonth}</p>
+      <a className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 font-medium text-primary-foreground" href={`https://pay.kiwify.com.br/2i2zp9y?codigo_salao=${encodeURIComponent(status?.salonCode || '')}`} target="_blank" rel="noreferrer"><ExternalLink className="h-4 w-4" />Realizar pagamento agora</a>
+    </section>
+  </div>
 }

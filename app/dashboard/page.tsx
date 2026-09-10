@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Calendar, DollarSign, Users, Scissors } from 'lucide-react'
 import { ensureSalonProfile, getCurrentSalon } from '@/app/actions/salon'
 import { getSubscriptionStatus } from '@/app/actions/subscription'
+import { getDashboardStats } from '@/app/actions/dashboard'
 import { AnimatedBackground } from '@/components/animated-background'
 
 export default function DashboardPage() {
@@ -14,6 +15,7 @@ export default function DashboardPage() {
   const [user, setUser] = useState<any>(null)
   const [salon, setSalon] = useState<any>(null)
   const [subscription, setSubscription] = useState<any>(null)
+  const [stats, setStats] = useState({ appointmentsToday: 0, revenueToday: 0, services: 0, employees: 0 })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -43,8 +45,9 @@ export default function DashboardPage() {
             localStorage.setItem('user_session', JSON.stringify(updatedSession))
             // Também salvar como salon_session para compatibilidade
             localStorage.setItem('salon_session', JSON.stringify(salonData))
-            const subscriptionStatus = await getSubscriptionStatus()
+            const [subscriptionStatus, dashboardStats] = await Promise.all([getSubscriptionStatus(), getDashboardStats()])
             setSubscription(subscriptionStatus)
+            setStats(dashboardStats)
           }
         } catch (error) {
           console.error('[v0] Erro ao criar salão:', error)
@@ -115,7 +118,7 @@ export default function DashboardPage() {
               <Calendar className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">0</div>
+              <div className="text-2xl font-bold">{stats.appointmentsToday}</div>
               <p className="text-xs text-muted-foreground">Clientes agendados</p>
             </CardContent>
           </Card>
@@ -127,7 +130,7 @@ export default function DashboardPage() {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">R$ 0,00</div>
+              <div className="text-2xl font-bold">{stats.revenueToday.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
               <p className="text-xs text-muted-foreground">Total de entradas</p>
             </CardContent>
           </Card>
@@ -139,7 +142,7 @@ export default function DashboardPage() {
               <Scissors className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">0</div>
+              <div className="text-2xl font-bold">{stats.services}</div>
               <p className="text-xs text-muted-foreground">Serviços ativos</p>
             </CardContent>
           </Card>
@@ -151,7 +154,7 @@ export default function DashboardPage() {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">0</div>
+              <div className="text-2xl font-bold">{stats.employees}</div>
               <p className="text-xs text-muted-foreground">Funcionários</p>
             </CardContent>
           </Card>
