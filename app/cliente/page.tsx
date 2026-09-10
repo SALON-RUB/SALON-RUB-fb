@@ -25,6 +25,15 @@ export default function ClientePage() {
   const [agendamentoConfirmado, setAgendamentoConfirmado] = useState<any>(null)
   const [horariosDisponiveis, setHorariosDisponiveis] = useState<string[]>([])
   const [carregandoHorarios, setCarregandoHorarios] = useState(false)
+  const diasDaSemana = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado']
+  const mesesAbreviados = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
+  const proximosSeteDias = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date()
+    date.setHours(12, 0, 0, 0)
+    date.setDate(date.getDate() + index)
+    const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+    return { value, day: date.getDate(), weekday: index === 0 ? 'hoje' : diasDaSemana[date.getDay()], month: mesesAbreviados[date.getMonth()] }
+  })
 
   useEffect(() => {
     if (!salon || !servicoSelecionado || !dataSelecionada) {
@@ -223,12 +232,21 @@ export default function ClientePage() {
                       <Calendar className="w-4 h-4 text-primary" />
                       Data
                     </h3>
-                    <Input
-                      type="date"
-                      value={dataSelecionada}
-                      onChange={(e) => setDataSelecionada(e.target.value)}
-                      min={new Date().toISOString().split('T')[0]}
-                    />
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+                      {proximosSeteDias.map((dia) => (
+                        <button
+                          key={dia.value}
+                          type="button"
+                          onClick={() => setDataSelecionada(dia.value)}
+                          className={`rounded-lg border px-2 py-3 text-center transition-colors ${dataSelecionada === dia.value ? 'border-primary bg-primary/15 text-foreground' : 'border-border hover:border-primary/60'}`}
+                          aria-pressed={dataSelecionada === dia.value}
+                        >
+                          <span className="block text-xs capitalize text-muted-foreground">{dia.weekday}</span>
+                          <span className="block text-xl font-semibold">{dia.day}</span>
+                          <span className="block text-xs uppercase text-muted-foreground">{dia.month}</span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
                   <div>
                     <h3 className="font-semibold mb-3 flex items-center gap-2">
