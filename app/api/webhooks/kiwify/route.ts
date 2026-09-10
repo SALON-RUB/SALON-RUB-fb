@@ -42,8 +42,8 @@ export async function POST(request: Request) {
 
   const now = new Date()
   const month = currentMonth()
-  await db.insert(salonSubscriptions).values({ salonId: salon.id, billingMonth: month, amount: MONTHLY_AMOUNT, pixKey: 'KIWIFY', status: 'approved', reviewedAt: now, reviewedBy: 'kiwify-webhook', submittedAt: now, updatedAt: now }).onConflictDoUpdate({ target: [salonSubscriptions.salonId, salonSubscriptions.billingMonth], set: { amount: MONTHLY_AMOUNT, status: 'approved', reviewedAt: now, reviewedBy: 'kiwify-webhook', updatedAt: now } })
-  await db.update(salons).set({ isActive: true, updatedAt: now }).where(eq(salons.id, salon.id))
+  await db.insert(salonSubscriptions).values({ salonId: salon.id, billingMonth: month, amount: MONTHLY_AMOUNT, pixKey: 'KIWIFY', status: 'pending_approval', submittedAt: now, updatedAt: now }).onConflictDoUpdate({ target: [salonSubscriptions.salonId, salonSubscriptions.billingMonth], set: { amount: MONTHLY_AMOUNT, status: 'pending_approval', submittedAt: now, reviewedAt: null, reviewedBy: null, updatedAt: now } })
+  await db.update(salons).set({ isActive: false, updatedAt: now }).where(eq(salons.id, salon.id))
 
   return NextResponse.json({ ok: true, salonId: salon.id, billingMonth: month })
 }

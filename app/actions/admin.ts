@@ -1,6 +1,6 @@
 'use server'
 
-import { and, desc, eq } from 'drizzle-orm'
+import { and, desc, eq, sql } from 'drizzle-orm'
 import { cookies } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { db } from '@/lib/db'
@@ -36,7 +36,7 @@ export async function setSalonActive(salonId: string, isActive: boolean) {
 export async function approveSubscription(salonId: string) {
   await requireAdmin()
   const now = new Date()
-  const pendingSubscription = await db.select({ id: salonSubscriptions.id }).from(salonSubscriptions).where(and(eq(salonSubscriptions.salonId, salonId), eq(salonSubscriptions.status, 'pending'))).orderBy(desc(salonSubscriptions.createdAt)).limit(1)
+  const pendingSubscription = await db.select({ id: salonSubscriptions.id }).from(salonSubscriptions).where(and(eq(salonSubscriptions.salonId, salonId), sql`${salonSubscriptions.status} in ('pending', 'pending_approval')`)).orderBy(desc(salonSubscriptions.createdAt)).limit(1)
   if (!pendingSubscription[0]) return { ok: false, error: 'Comprovante pendente não encontrado.' }
 
   await db.update(salonSubscriptions).set({ status: 'approved', reviewedAt: now, reviewedBy: 'admin', updatedAt: now }).where(eq(salonSubscriptions.id, pendingSubscription[0].id))
