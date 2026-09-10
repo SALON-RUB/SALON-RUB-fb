@@ -1,5 +1,5 @@
 import { db } from '@/lib/db'
-import { appointments, salons, services } from '@/lib/db/schema'
+import { appointments, businessHours, salons, services } from '@/lib/db/schema'
 import { apiJson, normalizeCode, validDate, validTime } from '@/lib/public-api'
 import { and, eq, ne } from 'drizzle-orm'
 import { NextRequest } from 'next/server'
@@ -22,6 +22,11 @@ export async function POST(request: NextRequest) {
     if (!salon.isActive) return apiJson({ error: 'Este salão está temporariamente indisponível.' }, { status: 403 })
     const service = await db.query.services.findFirst({ where: and(eq(services.id, serviceId), eq(services.salonId, salon.id)) })
     if (!service) return apiJson({ error: 'Serviço não encontrado neste salão.' }, { status: 404 })
+    const dayOfWeek = new Date(`${appointmentDate}T12:00:00`).getDay()
+    const hours = await db.query.businessHours.findFirst({ where: and(eq(businessHours.salonId, salon.id), eq(businessHours.dayOfWeek, dayOfWeek)) })
+    const toMinutes = (value: string) => { const [hour, minute] = value.split(':').map(Number); return hour * 60 + minute }
+    if (!hours?.isOpen || !hours.openingTime || !hours.closingTime || toMinutes(appointmentTime) < toMinutes(hours.openingTime) || toMinutes(appointmentTime) + (service.duration || 30) > toMinutes(hours.closingTime)) return apiJson({ error: 'Este horário não está dentro do funcionamento do salão.' }, { status: 409 })
+
     const existing = await db.query.appointments.findFirst({ where: and(eq(appointments.salonId, salon.id), eq(appointments.appointmentDate, appointmentDate), eq(appointments.appointmentTime, appointmentTime), ne(appointments.status, 'cancelado')) })
     if (existing) return apiJson({ error: 'Este horário já foi reservado.' }, { status: 409 })
     const [appointment] = await db.insert(appointments).values({ salonId: salon.id, serviceId: service.id, clientName, clientPhone, appointmentDate, appointmentTime, duration: service.duration, price: service.price, notes: typeof body.notes === 'string' ? body.notes.trim().slice(0, 2000) : null }).returning()

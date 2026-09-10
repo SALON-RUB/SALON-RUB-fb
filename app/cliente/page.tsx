@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -23,6 +23,31 @@ export default function ClientePage() {
   const [horaSelecionada, setHoraSelecionada] = useState('')
   const [observacoes, setObservacoes] = useState('')
   const [agendamentoConfirmado, setAgendamentoConfirmado] = useState<any>(null)
+  const [horariosDisponiveis, setHorariosDisponiveis] = useState<string[]>([])
+  const [carregandoHorarios, setCarregandoHorarios] = useState(false)
+
+  useEffect(() => {
+    if (!salon || !servicoSelecionado || !dataSelecionada) {
+      setHorariosDisponiveis([])
+      return
+    }
+    const loadAvailability = async () => {
+      setCarregandoHorarios(true)
+      setHoraSelecionada('')
+      try {
+        const response = await fetch(`/api/public/salons/${encodeURIComponent(salonCode.trim().toUpperCase())}/availability?date=${encodeURIComponent(dataSelecionada)}&serviceId=${encodeURIComponent(servicoSelecionado)}`, { cache: 'no-store' })
+        const data = await response.json().catch(() => null)
+        if (!response.ok) throw new Error(data?.error || 'Não foi possível carregar os horários.')
+        setHorariosDisponiveis(data.availableTimes || [])
+      } catch (availabilityError) {
+        console.error('[v0] Erro ao carregar horários:', availabilityError)
+        setHorariosDisponiveis([])
+      } finally {
+        setCarregandoHorarios(false)
+      }
+    }
+    loadAvailability()
+  }, [salon, salonCode, servicoSelecionado, dataSelecionada])
 
   const handleEntrarComCodigo = async () => {
     setError('')
@@ -86,11 +111,6 @@ export default function ClientePage() {
       setLoading(false)
     }
   }
-
-  const horariosDisponiveis = Array.from({ length: 9 }, (_, i) => {
-    const hora = String(9 + i).padStart(2, '0')
-    return `${hora}:00`
-  })
 
   return (
     <main className="min-h-screen bg-background flex flex-col relative overflow-hidden">
@@ -220,13 +240,14 @@ export default function ClientePage() {
                       onChange={(e) => setHoraSelecionada(e.target.value)}
                       className="w-full px-3 py-2 rounded-lg border border-border bg-background"
                     >
-                      <option value="">Selecione um horário</option>
+                      <option value="">{carregandoHorarios ? 'Carregando horários...' : 'Selecione um horário'}</option>
                       {horariosDisponiveis.map((hora) => (
                         <option key={hora} value={hora}>
                           {hora}
                         </option>
                       ))}
                     </select>
+                    {dataSelecionada && servicoSelecionado && !carregandoHorarios && horariosDisponiveis.length === 0 && <p className="mt-2 text-sm text-muted-foreground">Nenhum horário disponível para esta data e serviço.</p>}
                   </div>
                 </div>
 
