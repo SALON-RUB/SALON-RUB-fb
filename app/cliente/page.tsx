@@ -232,13 +232,13 @@ export default function ClientePage() {
                       <Calendar className="w-4 h-4 text-primary" />
                       Data
                     </h3>
-                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+                    <div className="flex gap-2 overflow-x-auto pb-2 sm:grid sm:grid-cols-4 lg:grid-cols-7">
                       {proximosSeteDias.map((dia) => (
                         <button
                           key={dia.value}
                           type="button"
                           onClick={() => setDataSelecionada(dia.value)}
-                          className={`rounded-lg border px-2 py-3 text-center transition-colors ${dataSelecionada === dia.value ? 'border-primary bg-primary/15 text-foreground' : 'border-border hover:border-primary/60'}`}
+                          className={`min-w-[92px] flex-1 rounded-lg border px-2 py-3 text-center transition-colors sm:min-w-0 ${dataSelecionada === dia.value ? 'border-primary bg-primary/15 text-foreground' : 'border-border hover:border-primary/60'}`}
                           aria-pressed={dataSelecionada === dia.value}
                         >
                           <span className="block text-xs capitalize text-muted-foreground">{dia.weekday}</span>
