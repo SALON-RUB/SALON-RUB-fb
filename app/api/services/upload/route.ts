@@ -13,6 +13,11 @@ export async function POST(request: Request) {
   if (!file.type.startsWith('image/')) return NextResponse.json({ error: 'O arquivo precisa ser uma imagem.' }, { status: 400 })
   if (file.size > 5 * 1024 * 1024) return NextResponse.json({ error: 'A imagem deve ter no máximo 5 MB.' }, { status: 400 })
 
-  const blob = await put(`services/${session.user.id}/${crypto.randomUUID()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '-')}`, file, { access: 'public', addRandomSuffix: false })
-  return NextResponse.json({ url: blob.url })
+  try {
+    const blob = await put(`services/${session.user.id}/${crypto.randomUUID()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '-')}`, file, { access: 'public', addRandomSuffix: false })
+    return NextResponse.json({ url: blob.url })
+  } catch (error) {
+    console.error('[v0] Falha no upload da imagem:', error)
+    return NextResponse.json({ error: 'Não foi possível armazenar a imagem agora. Tente novamente.' }, { status: 503 })
+  }
 }
