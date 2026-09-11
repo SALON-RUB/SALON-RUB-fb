@@ -23,12 +23,24 @@ export async function POST(request: NextRequest) {
     const service = await db.query.services.findFirst({ where: and(eq(services.id, serviceId), eq(services.salonId, salon.id)) })
     if (!service) return apiJson({ error: 'Serviço não encontrado neste salão.' }, { status: 404 })
     const dayOfWeek = new Date(`${appointmentDate}T12:00:00`).getDay()
-    const hours = await db.query.businessHours.findFirst({ where: and(eq(businessHours.salonId, salon.id), eq(businessHours.dayOfWeek, dayOfWeek)) })
+    const dayKeys = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'] as const
+    const configuredHours = (salon.settings as { horarios?: Record<string, { aberto?: boolean; horarioInicio?: string; horarioFim?: string }> } | null)?.horarios?.[dayKeys[dayOfWeek]]
+    const legacyHours = await db.query.businessHours.findFirst({ where: and(eq(businessHours.salonId, salon.id), eq(businessHours.dayOfWeek, dayOfWeek)) })
+    const openingTime = configuredHours?.horarioInicio || legacyHours?.openingTime || ''
+    const closingTime = configuredHours?.horarioFim || legacyHours?.closingTime || ''
+    const isOpen = configuredHours ? configuredHours.aberto === true : legacyHours?.isOpen === true
     const toMinutes = (value: string) => { const [hour, minute] = value.split(':').map(Number); return hour * 60 + minute }
-    if (!hours?.isOpen || !hours.openingTime || !hours.closingTime || toMinutes(appointmentTime) < toMinutes(hours.openingTime) || toMinutes(appointmentTime) + (service.duration || 30) > toMinutes(hours.closingTime)) return apiJson({ error: 'Este horário não está dentro do funcionamento do salão.' }, { status: 409 })
+    const start = toMinutes(appointmentTime)
+    const duration = Math.max(15, service.duration || 30)
+    if (!isOpen || !openingTime || !closingTime || start < toMinutes(openingTime) || start + duration > toMinutes(closingTime)) return apiJson({ error: 'Este horário não está dentro do funcionamento do salão.' }, { status: 409 })
 
-    const existing = await db.query.appointments.findFirst({ where: and(eq(appointments.salonId, salon.id), eq(appointments.appointmentDate, appointmentDate), eq(appointments.appointmentTime, appointmentTime), ne(appointments.status, 'cancelado')) })
-    if (existing) return apiJson({ error: 'Este horário já foi reservado.' }, { status: 409 })
+    const existingAppointments = await db.query.appointments.findMany({ where: and(eq(appointments.salonId, salon.id), eq(appointments.appointmentDate, appointmentDate), ne(appointments.status, 'cancelado')) })
+    const overlaps = existingAppointments.some((item) => {
+      const bookedStart = toMinutes(item.appointmentTime)
+      const bookedDuration = Math.max(15, item.duration || 30)
+      return start < bookedStart + bookedDuration && start + duration > bookedStart
+    })
+    if (overlaps) return apiJson({ error: 'Este horário já foi reservado.' }, { status: 409 })
     const [appointment] = await db.insert(appointments).values({ salonId: salon.id, serviceId: service.id, clientName, clientPhone, appointmentDate, appointmentTime, duration: service.duration, price: service.price, notes: typeof body.notes === 'string' ? body.notes.trim().slice(0, 2000) : null }).returning()
     return apiJson({ appointment }, { status: 201 })
   } catch (error) {

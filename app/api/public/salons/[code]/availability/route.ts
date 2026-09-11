@@ -29,21 +29,30 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     if (!service) return apiJson({ error: 'Serviço não encontrado neste salão.' }, { status: 404 })
 
     const dayOfWeek = new Date(`${date}T12:00:00`).getDay()
-    const hours = await db.query.businessHours.findFirst({ where: and(eq(businessHours.salonId, salon.id), eq(businessHours.dayOfWeek, dayOfWeek)) })
-    if (!hours?.isOpen || !hours.openingTime || !hours.closingTime) return apiJson({ date, serviceId, availableTimes: [], bookedTimes: [] })
+    const dayKeys = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'] as const
+    const configuredHours = (salon.settings as { horarios?: Record<string, { aberto?: boolean; horarioInicio?: string; horarioFim?: string }> } | null)?.horarios?.[dayKeys[dayOfWeek]]
+    const legacyHours = await db.query.businessHours.findFirst({ where: and(eq(businessHours.salonId, salon.id), eq(businessHours.dayOfWeek, dayOfWeek)) })
+    const openingTime = configuredHours?.horarioInicio || legacyHours?.openingTime || ''
+    const closingTime = configuredHours?.horarioFim || legacyHours?.closingTime || ''
+    const isOpen = configuredHours ? configuredHours.aberto === true : legacyHours?.isOpen === true
+    if (!isOpen || !openingTime || !closingTime) return apiJson({ date, serviceId, availableTimes: [], bookedTimes: [] })
 
-    const booked = await db.select({ time: appointments.appointmentTime }).from(appointments).where(and(eq(appointments.salonId, salon.id), eq(appointments.appointmentDate, date), ne(appointments.status, 'cancelado')))
-    const bookedTimes = booked.map((item) => item.time)
+    const booked = await db.select({ time: appointments.appointmentTime, duration: appointments.duration }).from(appointments).where(and(eq(appointments.salonId, salon.id), eq(appointments.appointmentDate, date), ne(appointments.status, 'cancelado')))
     const duration = Math.max(15, service.duration || 30)
-    const opening = toMinutes(hours.openingTime)
-    const closing = toMinutes(hours.closingTime)
+    const opening = toMinutes(openingTime)
+    const closing = toMinutes(closingTime)
     const availableTimes: string[] = []
     for (let start = opening; start + duration <= closing; start += duration) {
       const time = toTime(start)
-      if (!bookedTimes.includes(time)) availableTimes.push(time)
+      const overlaps = booked.some((item) => {
+        const bookedStart = toMinutes(item.time)
+        const bookedEnd = bookedStart + Math.max(15, item.duration || 30)
+        return start < bookedEnd && start + duration > bookedStart
+      })
+      if (!overlaps) availableTimes.push(time)
     }
 
-    return apiJson({ date, serviceId, availableTimes, bookedTimes })
+    return apiJson({ date, serviceId, availableTimes, bookedTimes: booked.map((item) => item.time) })
   } catch (error) {
     console.error('[v0] Erro ao buscar disponibilidade:', error)
     return apiJson({ error: 'Não foi possível carregar os horários.' }, { status: 500 })

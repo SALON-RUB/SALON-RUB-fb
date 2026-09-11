@@ -22,19 +22,20 @@ function currentMonth() {
 
 export async function POST(request: Request) {
   if (!WEBHOOK_TOKEN) return NextResponse.json({ error: 'Webhook não configurado.' }, { status: 503 })
-  const providedToken = request.headers.get('x-kiwify-token') || request.headers.get('x-webhook-token')
+  const providedToken = request.headers.get('x-kiwify-token') || request.headers.get('x-webhook-token') || request.headers.get('authorization')?.replace(/^Bearer\s+/i, '') || new URL(request.url).searchParams.get('token')
   if (providedToken !== WEBHOOK_TOKEN) return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 })
 
   const payload = await request.json().catch(() => null) as Record<string, unknown> | null
   if (!payload) return NextResponse.json({ error: 'JSON inválido.' }, { status: 400 })
 
-  const event = readValue(payload, ['event', 'webhook_event_type', 'type', 'data.event'])?.toLowerCase()
-  if (event !== 'compra_aprovada' && event !== 'purchase_approved' && event !== 'approved') return NextResponse.json({ received: true, ignored: true })
+  const event = readValue(payload, ['event', 'webhook_event_type', 'type', 'data.event', 'data.webhook_event_type', 'order.status', 'data.order.status'])?.toLowerCase().replace(/[.\s-]+/g, '_')
+  const approvedEvents = new Set(['compra_aprovada', 'purchase_approved', 'approved', 'order_approved', 'purchase_approved_by_platform', 'subscription_renewed', 'subscription_active'])
+  if (!event || !approvedEvents.has(event)) return NextResponse.json({ received: true, ignored: true })
 
-  const productId = readValue(payload, ['product.id', 'product_id', 'data.product.id', 'data.product_id'])
-  if (PRODUCT_ID && productId && productId !== PRODUCT_ID) return NextResponse.json({ error: 'Produto não corresponde.' }, { status: 422 })
+  const productId = readValue(payload, ['product.id', 'product_id', 'data.product.id', 'data.product_id', 'order.product.id', 'data.order.product.id'])
+  if (PRODUCT_ID && productId !== PRODUCT_ID) return NextResponse.json({ error: 'Produto não corresponde.' }, { status: 422 })
 
-  const salonCode = readValue(payload, ['custom_fields.codigo_salao', 'custom_fields.salon_code', 'metadata.salonCode', 'metadata.salon_code', 'codigo_salao', 'salon_code', 'salonCode'])?.toUpperCase()
+  const salonCode = readValue(payload, ['custom_fields.codigo_salao', 'custom_fields.salon_code', 'custom_fields.salonCode', 'data.custom_fields.codigo_salao', 'data.custom_fields.salon_code', 'metadata.salonCode', 'metadata.salon_code', 'data.metadata.salonCode', 'codigo_salao', 'salon_code', 'salonCode'])?.toUpperCase()
   if (!salonCode) return NextResponse.json({ error: 'Código do salão não informado.' }, { status: 422 })
 
   const salon = (await db.select({ id: salons.id }).from(salons).where(eq(salons.salonCode, salonCode)).limit(1))[0]
@@ -42,10 +43,10 @@ export async function POST(request: Request) {
 
   const now = new Date()
   const month = currentMonth()
-  await db.insert(salonSubscriptions).values({ salonId: salon.id, billingMonth: month, amount: MONTHLY_AMOUNT, pixKey: 'KIWIFY', status: 'pending_approval', submittedAt: now, updatedAt: now }).onConflictDoUpdate({ target: [salonSubscriptions.salonId, salonSubscriptions.billingMonth], set: { amount: MONTHLY_AMOUNT, status: 'pending_approval', submittedAt: now, reviewedAt: null, reviewedBy: null, updatedAt: now } })
-  await db.update(salons).set({ isActive: false, updatedAt: now }).where(eq(salons.id, salon.id))
+  await db.insert(salonSubscriptions).values({ salonId: salon.id, billingMonth: month, amount: MONTHLY_AMOUNT, pixKey: 'KIWIFY', status: 'approved', submittedAt: now, reviewedAt: now, updatedAt: now }).onConflictDoUpdate({ target: [salonSubscriptions.salonId, salonSubscriptions.billingMonth], set: { amount: MONTHLY_AMOUNT, status: 'approved', submittedAt: now, reviewedAt: now, reviewedBy: null, updatedAt: now } })
+  await db.update(salons).set({ isActive: true, updatedAt: now }).where(eq(salons.id, salon.id))
 
-  return NextResponse.json({ ok: true, salonId: salon.id, billingMonth: month })
+  return NextResponse.json({ ok: true, activated: true, salonId: salon.id, billingMonth: month })
 }
 
 export async function GET() {
