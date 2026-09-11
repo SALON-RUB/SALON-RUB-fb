@@ -47,11 +47,23 @@ export default function ServicosPage() {
   }
 
   const handleImageUpload = async (file: File) => {
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) throw new Error('Use uma imagem JPG, PNG ou WEBP.')
+    if (file.size > 5 * 1024 * 1024) throw new Error('A imagem deve ter no máximo 5 MB.')
+    setFormData((current) => ({ ...current, imageUrl: 'uploading' }))
     const body = new FormData()
     body.append('file', file)
-    const response = await fetch('/api/services/upload', { method: 'POST', body })
+    let response: Response
+    try {
+      response = await fetch('/api/services/upload', { method: 'POST', body })
+    } catch (error) {
+      setFormData((current) => ({ ...current, imageUrl: '' }))
+      throw new Error('Não foi possível conectar ao servidor de imagens.')
+    }
     const data = await response.json().catch(() => null)
-    if (!response.ok) throw new Error(data?.error || 'Não foi possível enviar a imagem.')
+    if (!response.ok) {
+      setFormData((current) => ({ ...current, imageUrl: '' }))
+      throw new Error(data?.error || 'Não foi possível enviar a imagem.')
+    }
     setFormData((current) => ({ ...current, imageUrl: data.url }))
   }
 
@@ -59,6 +71,12 @@ export default function ServicosPage() {
     // Validar campos do formulário
     if (!formData.name || !formData.price || parseFloat(formData.price) === 0) {
       setToastMessage('Preencha nome, categoria e preço')
+      setToastType('error')
+      setShowToast(true)
+      return
+    }
+    if (formData.imageUrl === 'uploading') {
+      setToastMessage('Aguarde o upload da imagem terminar.')
       setToastType('error')
       setShowToast(true)
       return
