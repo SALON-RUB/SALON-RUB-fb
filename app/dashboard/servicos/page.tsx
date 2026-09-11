@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Toast } from '@/components/toast'
-import { Scissors, Plus, X, Edit2, Trash2 } from 'lucide-react'
+import { Scissors, Plus, X, Edit2, Trash2, ImagePlus } from 'lucide-react'
 import { createService, getServices, updateService, deleteService } from '@/app/actions/services'
 
 export default function ServicosPage() {
@@ -22,6 +22,7 @@ export default function ServicosPage() {
     category: 'Corte',
     duration: '30',
     price: '0',
+    imageUrl: '',
   })
 
   useEffect(() => {
@@ -45,6 +46,15 @@ export default function ServicosPage() {
     }
   }
 
+  const handleImageUpload = async (file: File) => {
+    const body = new FormData()
+    body.append('file', file)
+    const response = await fetch('/api/services/upload', { method: 'POST', body })
+    const data = await response.json().catch(() => null)
+    if (!response.ok) throw new Error(data?.error || 'Não foi possível enviar a imagem.')
+    setFormData((current) => ({ ...current, imageUrl: data.url }))
+  }
+
   const handleAddService = () => {
     // Validar campos do formulário
     if (!formData.name || !formData.price || parseFloat(formData.price) === 0) {
@@ -62,6 +72,7 @@ export default function ServicosPage() {
             category: formData.category,
             duration: parseInt(formData.duration),
             price: formData.price,
+            imageUrl: formData.imageUrl,
           })
           setToastMessage('Serviço atualizado com sucesso!')
         } else {
@@ -70,11 +81,12 @@ export default function ServicosPage() {
             category: formData.category,
             duration: parseInt(formData.duration),
             price: formData.price,
+            imageUrl: formData.imageUrl,
           })
           setToastMessage('Serviço criado com sucesso!')
         }
 
-        setFormData({ name: '', category: 'Corte', duration: '30', price: '0' })
+        setFormData({ name: '', category: 'Corte', duration: '30', price: '0', imageUrl: '' })
         setEditingId(null)
         setShowForm(false)
         setToastType('success')
@@ -111,6 +123,7 @@ export default function ServicosPage() {
       category: service.category,
       duration: service.duration.toString(),
       price: service.price,
+      imageUrl: service.imageUrl || '',
     })
     setEditingId(service.id)
     setShowForm(true)
@@ -152,7 +165,7 @@ export default function ServicosPage() {
                 onClick={() => {
                   setShowForm(false)
                   setEditingId(null)
-                  setFormData({ name: '', category: 'Corte', duration: '30', price: '0' })
+                  setFormData({ name: '', category: 'Corte', duration: '30', price: '0', imageUrl: '' })
                 }}
               >
                 <X className="w-5 h-5" />
@@ -199,13 +212,22 @@ export default function ServicosPage() {
                 />
               </div>
 
+              <div className="space-y-3">
+                <label className="text-sm font-medium">Foto do serviço</label>
+                <div className="flex items-center gap-4">
+                  {formData.imageUrl ? <img src={formData.imageUrl} alt="Pré-visualização do serviço" className="h-20 w-20 rounded-lg object-cover" /> : <div className="flex h-20 w-20 items-center justify-center rounded-lg border border-dashed border-border text-muted-foreground"><ImagePlus className="h-6 w-6" /></div>}
+                  <Input type="file" accept="image/*" onChange={(event) => { const file = event.target.files?.[0]; if (file) void handleImageUpload(file).catch((error: Error) => { setToastMessage(error.message); setToastType('error'); setShowToast(true) }) }} />
+                </div>
+                <p className="text-xs text-muted-foreground">JPG, PNG ou WEBP, até 5 MB.</p>
+              </div>
+
               <div className="flex gap-3 pt-4">
                 <Button
                   variant="outline"
                   onClick={() => {
                     setShowForm(false)
                     setEditingId(null)
-                    setFormData({ name: '', category: 'Corte', duration: '30', price: '0' })
+                    setFormData({ name: '', category: 'Corte', duration: '30', price: '0', imageUrl: '' })
                   }}
                   className="flex-1"
                 >
@@ -223,7 +245,8 @@ export default function ServicosPage() {
         {services.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {services.map((service) => (
-              <Card key={service.id} className="hover:border-primary/50 transition-colors">
+              <Card key={service.id} className="overflow-hidden hover:border-primary/50 transition-colors">
+                {service.imageUrl && <img src={service.imageUrl} alt={`Foto de ${service.name}`} className="h-40 w-full object-cover" />}
                 <CardHeader>
                   <CardTitle className="text-lg">{service.name}</CardTitle>
                   <p className="text-sm text-muted-foreground">{service.category}</p>

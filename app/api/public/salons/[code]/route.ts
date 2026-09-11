@@ -15,7 +15,8 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       db.query.services.findMany({ where: eq(services.salonId, salon.id) }),
       db.query.businessHours.findMany({ where: eq(businessHours.salonId, salon.id) }),
     ])
-    return apiJson({ salon: { id: salon.id, code: salon.salonCode, name: salon.name, phone: salon.phone, address: salon.address, settings: salon.settings }, services: salonServices, businessHours: hours })
+    const serviceImages = ((salon.settings || {}) as Record<string, unknown>).serviceImages as Record<string, string> | undefined
+    return apiJson({ salon: { id: salon.id, code: salon.salonCode, name: salon.name, phone: salon.phone, address: salon.address, settings: salon.settings }, services: salonServices.map((service) => ({ ...service, imageUrl: serviceImages?.[service.id] || '' })), businessHours: hours })
   } catch (error) {
     console.error('[v0] Erro na API pública do salão:', error)
     return apiJson({ error: 'Erro interno ao buscar o salão.' }, { status: 500 })

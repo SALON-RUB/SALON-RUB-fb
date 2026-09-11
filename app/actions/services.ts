@@ -26,6 +26,7 @@ export async function createService(serviceData: {
   category: string
   duration: number
   price: string
+  imageUrl?: string
 }) {
   const userId = await getUserId()
   const salon = await getSalonByUserId(userId)
@@ -41,6 +42,12 @@ export async function createService(serviceData: {
     })
     .returning()
 
+  if (serviceData.imageUrl) {
+    const settings = (salon.settings || {}) as Record<string, unknown>
+    const serviceImages = { ...((settings.serviceImages || {}) as Record<string, string>), [newService[0].id]: serviceData.imageUrl }
+    await db.update(salons).set({ settings: { ...settings, serviceImages }, updatedAt: new Date() }).where(eq(salons.id, salon.id))
+  }
+
   revalidatePath('/dashboard/servicos')
   return newService[0]
 }
@@ -49,9 +56,9 @@ export async function getServices() {
   const userId = await getUserId()
   const salon = await getSalonByUserId(userId)
 
-  return db.query.services.findMany({
-    where: eq(services.salonId, salon.id),
-  })
+  const rows = await db.query.services.findMany({ where: eq(services.salonId, salon.id) })
+  const serviceImages = ((salon.settings || {}) as Record<string, unknown>).serviceImages as Record<string, string> | undefined
+  return rows.map((service) => ({ ...service, imageUrl: serviceImages?.[service.id] || '' }))
 }
 
 export async function updateService(
@@ -61,6 +68,7 @@ export async function updateService(
     category: string
     duration: number
     price: string
+    imageUrl?: string
   }
 ) {
   const userId = await getUserId()
@@ -79,6 +87,12 @@ export async function updateService(
       and(eq(services.salonId, salon.id), eq(services.id, serviceId))
     )
     .returning()
+
+  if (serviceData.imageUrl) {
+    const settings = (salon.settings || {}) as Record<string, unknown>
+    const serviceImages = { ...((settings.serviceImages || {}) as Record<string, string>), [serviceId]: serviceData.imageUrl }
+    await db.update(salons).set({ settings: { ...settings, serviceImages }, updatedAt: new Date() }).where(eq(salons.id, salon.id))
+  }
 
   revalidatePath('/dashboard/servicos')
   return updated[0]

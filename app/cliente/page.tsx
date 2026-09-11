@@ -213,6 +213,7 @@ export default function ClientePage() {
                               : 'border-border hover:border-primary/50'
                           }`}
                         >
+                          {servico.imageUrl && <img src={servico.imageUrl} alt={`Foto de ${servico.name}`} className="mb-3 h-32 w-full rounded-md object-cover" />}
                           <p className="font-medium">{servico.name}</p>
                           <p className="text-sm text-muted-foreground">{servico.duration} min</p>
                           <p className="text-sm font-semibold text-primary">R$ {parseFloat(servico.price || '0').toFixed(2)}</p>
